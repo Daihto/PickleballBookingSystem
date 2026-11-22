@@ -107,3 +107,7 @@ The local database is `pickleball.db`. Render deployments may use `DB_PATH=/tmp/
 - Responsive player booking, sessions, lookup, and staff views
 - Subtle entrance, loading, hover, and success feedback
 - Reduced-motion support for accessibility
+
+## Custom domain
+
+A custom domain is not bundled with source code. In Render, open the service, select **Custom Domains**, and add the chosen hostname. Then create the DNS records Render provides at the domain registrar, typically a CNAME for a subdomain or A/ALIAS records for an apex domain. Wait for DNS verification before treating the Render URL as the primary public address.

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS private_slots (id INTEGER PRIMARY KEY, request_id INT
 CREATE TABLE IF NOT EXISTS blocks (id INTEGER PRIMARY KEY, court_id INTEGER, date TEXT, start_hour INTEGER, end_hour INTEGER, reason TEXT);
 CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY, type TEXT, title TEXT, court_id INTEGER, date TEXT, start_hour INTEGER, end_hour INTEGER, skill TEXT, fee INTEGER, capacity INTEGER, coach TEXT);
 CREATE TABLE IF NOT EXISTS registrations (id INTEGER PRIMARY KEY, session_id INTEGER, player_name TEXT, mobile TEXT, status TEXT, created_at TEXT, UNIQUE(session_id,mobile));
+CREATE TABLE IF NOT EXISTS player_accounts (id INTEGER PRIMARY KEY, name TEXT NOT NULL, mobile TEXT UNIQUE NOT NULL, pin_hash TEXT NOT NULL, created_at TEXT);
 `;
 db.exec(tables);
 db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_active_private_slot ON private_slots(court_id,date,start_hour) WHERE status IN ('Pending','Confirmed')`);
@@ -134,7 +135,9 @@ app.post('/api/requests',(req,res)=>{
       const items=normalized.map(s=>{const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any;return {courtId:c.id,courtName:c.name,date,start:s.start,end:s.start+1,rate:weekend?c.weekend_rate:c.weekday_rate}});
       throw {code:'PRICE_CHANGED',updatedQuote:{date,items,subtotal,paddleQty:requestedPaddles,paddlePrice:80,paddleTotal:addTotal,grandTotal,revision:Date.now()}};
     }
-    const result=db.prepare('INSERT INTO private_requests(reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(reference,name,mobile,'Pending',subtotal,addTotal,subtotal+addTotal,requestedPaddles,new Date().toISOString());
+    const playerHeader=String(req.headers['x-player-token']||''); let playerId:number|null=null;
+    try{const payload=jwt.verify(playerHeader,JWT_SECRET) as any;if(payload.role==='player')playerId=Number(payload.playerId)}catch{}
+    const result=db.prepare('INSERT INTO private_requests(reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at,player_id) VALUES (?,?,?,?,?,?,?,?,?,?)').run(reference,name,mobile,'Pending',subtotal,addTotal,subtotal+addTotal,requestedPaddles,new Date().toISOString(),playerId);
     const rid=Number(result.lastInsertRowid);
     for(const s of normalized){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; db.prepare('INSERT INTO private_slots(request_id,court_id,date,start_hour,end_hour,rate,status) VALUES (?,?,?,?,?,?,?)').run(rid,c.id,date,s.start,s.start+1,weekend?c.weekend_rate:c.weekday_rate,'Pending')}
     return {reference,status:'Pending'};
@@ -253,3 +256,31 @@ app.listen(port,()=>console.log(`Pickleball API running at http://localhost:${po
 function formatApiHour(hour:number){const normalized=((hour%24)+24)%24;const suffix=normalized>=12?'PM':'AM';const shown=normalized%12||12;return `${shown}:00 ${suffix}`}
 type Selection={courtId:number,start:number};
 function manilaDate(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-')}
+
+try{db.prepare('ALTER TABLE private_requests ADD COLUMN player_id INTEGER').run()}catch{}
+
+app.post('/api/player/register',(req,res)=>{
+  const {name,mobile,pin}=req.body;
+  if(!name||!/^09\d{9}$/.test(String(mobile||''))||!/^\d{4}$/.test(String(pin||'')))return res.status(400).json({error:'Enter a name, Philippine 11-digit mobile number, and 4-digit PIN'});
+  try{
+    const r=db.prepare('INSERT INTO player_accounts(name,mobile,pin_hash,created_at) VALUES (?,?,?,?)').run(name,String(mobile),bcrypt.hashSync(String(pin),10),new Date().toISOString());
+    const account=db.prepare('SELECT id,name,mobile FROM player_accounts WHERE id=?').get(r.lastInsertRowid) as any;
+    res.status(201).json({token:jwt.sign({playerId:account.id,role:'player'},JWT_SECRET,{expiresIn:'30d'}),player:account});
+  }catch(e:any){res.status(409).json({error:'A player account already exists for this mobile number'})}
+});
+app.post('/api/player/login',(req,res)=>{
+  const {mobile,pin}=req.body;
+  const account=db.prepare('SELECT * FROM player_accounts WHERE mobile=?').get(String(mobile||'')) as any;
+  if(!account||!bcrypt.compareSync(String(pin||''),account.pin_hash))return res.status(401).json({error:'Invalid mobile number or PIN'});
+  res.json({token:jwt.sign({playerId:account.id,role:'player'},JWT_SECRET,{expiresIn:'30d'}),player:{id:account.id,name:account.name,mobile:account.mobile}});
+});
+app.get('/api/player/me',(req,res)=>{
+  const token=(req.headers['x-player-token'] as string)||'';
+  try{
+    const payload=jwt.verify(token,JWT_SECRET) as any;if(payload.role!=='player')throw new Error();
+    const player=db.prepare('SELECT id,name,mobile FROM player_accounts WHERE id=?').get(payload.playerId) as any;if(!player)throw new Error();
+    const requests=db.prepare('SELECT pr.*, (SELECT COUNT(*) FROM private_slots ps WHERE ps.request_id=pr.id) slot_count FROM private_requests pr WHERE pr.player_id=? OR pr.mobile=? ORDER BY pr.created_at DESC').all(player.id,player.mobile);
+    const sessions=db.prepare('SELECT r.*,s.title,s.date,s.start_hour,s.end_hour,s.court_id,c.name court_name FROM registrations r JOIN sessions s ON s.id=r.session_id JOIN courts c ON c.id=s.court_id WHERE r.mobile=? ORDER BY s.date DESC,s.start_hour').all(player.mobile);
+    res.json({player,requests,sessions});
+  }catch(e){res.status(401).json({error:'Player sign-in required'})}
+});
