@@ -217,7 +217,7 @@ app.post('/api/staff/blocks',auth,(req,res)=>{
 
 app.post('/api/staff/sessions',auth,(req,res)=>{
   const s=req.body;
-  const tr=db.transaction(()=>{db.prepare('INSERT INTO sessions(type,title,court_id,date,start_hour,end_hour,skill,fee,capacity,coach) VALUES (?,?,?,?,?,?,?,?,?,?)').run(s.type,s.title,s.courtId,s.date,s.start,s.end,s.skill,s.fee,s.capacity,s.coach||'')});
+  const tr=db.transaction(()=>{if(occupied(s.courtId,s.date,s.start,s.end))throw new Error('Court time conflicts with an existing booking, block, or session');db.prepare('INSERT INTO sessions(type,title,court_id,date,start_hour,end_hour,skill,fee,capacity,coach) VALUES (?,?,?,?,?,?,?,?,?,?)').run(s.type,s.title,s.courtId,s.date,s.start,s.end,s.skill,s.fee,s.capacity,s.coach||'')});
   try{tr();res.status(201).json({ok:true})}catch(e:any){res.status(409).json({error:e.message})}
 });
 

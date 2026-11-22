@@ -99,3 +99,11 @@ The local database is `pickleball.db`. Render deployments may use `DB_PATH=/tmp/
 - Open Play, coaching, filters, waitlist, check-in, and promotion
 - Staff JWT authorization
 - Phone-width responsive layout and 12-hour Cebu time display
+
+## Premium interface
+
+- Custom particle-inspired pickleball opening screen
+- Cohesive court-reservation and staff-operations design system
+- Responsive player booking, sessions, lookup, and staff views
+- Subtle entrance, loading, hover, and success feedback
+- Reduced-motion support for accessibility
