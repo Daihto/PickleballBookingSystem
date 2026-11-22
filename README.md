@@ -81,3 +81,21 @@ The server creates the schema and seeds Mactan Pickleball Club, four courts, one
 - The app shows a short branded loading animation on first open.
 - Booking and session date fields use the browser calendar picker and default to Cebu local time.
 - Loading, empty, error, selected, unavailable, and success states are text-labelled as well as color-coded.
+
+## Data model
+
+SQLite tables store venues, staff, courts, private requests and slots, maintenance blocks, sessions, and session registrations. Shared court availability checks private slots, blocks, and sessions before saving. A partial unique index rejects duplicate active private court slots.
+
+## Deployment and persistence
+
+The local database is `pickleball.db`. Render deployments may use `DB_PATH=/tmp/pickleball.db` for a temporary demo or a persistent disk at `/var/data/pickleball.db`. The README and demo must disclose whether deployed data is temporary.
+
+## Test coverage checklist
+
+- Multi-court and paddle quote submission
+- Private request staff confirmation and player reference lookup
+- Server-side conflict and stock rechecks
+- Cancellation and decline slot release
+- Open Play, coaching, filters, waitlist, check-in, and promotion
+- Staff JWT authorization
+- Phone-width responsive layout and 12-hour Cebu time display

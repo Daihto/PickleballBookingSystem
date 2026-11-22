@@ -46,6 +46,7 @@ function seed() {
   si.run('Coaching','Private Lesson',1,d2,16,17,'Intermediate',900,1,'Coach Miguel');
 }
 seed();
+db.prepare("UPDATE courts SET open_hour=0,close_hour=24 WHERE mode='24h'").run();
 
 const auth = (req:any,res:any,next:any) => {
   const token = (req.headers.authorization || '').replace('Bearer ','');
@@ -105,7 +106,7 @@ app.post('/api/quote', (req,res)=>{
 });
 
 app.post('/api/requests',(req,res)=>{
-  const {name,mobile,date,selections=[],paddleQty=0}=req.body;
+  const {name,mobile,date,selections=[],paddleQty=0,expectedGrandTotal}=req.body;
   if(!name||!mobile||selections.length===0) return res.status(400).json({error:'Name, mobile, date and at least one slot are required'});
   const requestedPaddles=Math.max(0,Number(paddleQty||0));
   if(requestedPaddles>12) return res.status(400).json({error:'Paddle rental stock is 12 pairs'});
@@ -128,12 +129,17 @@ app.post('/api/requests',(req,res)=>{
     const reference='MPB-'+Math.random().toString(36).slice(2,8).toUpperCase();
     for(const s of normalized){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; subtotal+=(weekend?c.weekend_rate:c.weekday_rate)}
     const addTotal=requestedPaddles*80;
+    const grandTotal=subtotal+addTotal;
+    if(expectedGrandTotal!==undefined&&Number(expectedGrandTotal)!==grandTotal){
+      const items=normalized.map(s=>{const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any;return {courtId:c.id,courtName:c.name,date,start:s.start,end:s.start+1,rate:weekend?c.weekend_rate:c.weekday_rate}});
+      throw {code:'PRICE_CHANGED',updatedQuote:{date,items,subtotal,paddleQty:requestedPaddles,paddlePrice:80,paddleTotal:addTotal,grandTotal,revision:Date.now()}};
+    }
     const result=db.prepare('INSERT INTO private_requests(reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(reference,name,mobile,'Pending',subtotal,addTotal,subtotal+addTotal,requestedPaddles,new Date().toISOString());
     const rid=Number(result.lastInsertRowid);
     for(const s of normalized){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; db.prepare('INSERT INTO private_slots(request_id,court_id,date,start_hour,end_hour,rate,status) VALUES (?,?,?,?,?,?,?)').run(rid,c.id,date,s.start,s.start+1,weekend?c.weekend_rate:c.weekday_rate,'Pending')}
     return {reference,status:'Pending'};
   });
-  try{res.status(201).json(submit())}catch(e:any){res.status(409).json({error:e.message})}
+  try{res.status(201).json(submit())}catch(e:any){if(e?.code==='PRICE_CHANGED')res.status(409).json({error:'The quote changed. Review the updated total before submitting.',updatedQuote:e.updatedQuote});else res.status(409).json({error:e.message||'Unable to complete the request'})}
 });
 
 app.post('/api/lookup',(req,res)=>{
@@ -179,7 +185,7 @@ app.get('/api/staff/dashboard',auth,(req,res)=>{
   const requests=db.prepare('SELECT pr.*, (SELECT COUNT(*) FROM private_slots ps WHERE ps.request_id=pr.id) slot_count FROM private_requests pr ORDER BY created_at DESC').all();
   const slots=db.prepare('SELECT ps.*,c.name court_name,pr.reference,pr.player_name,pr.status request_status FROM private_slots ps JOIN courts c ON c.id=ps.court_id JOIN private_requests pr ON pr.id=ps.request_id WHERE ps.date=? ORDER BY ps.start_hour,c.id').all(date);
   const sessions=db.prepare('SELECT s.*,c.name court_name FROM sessions s JOIN courts c ON c.id=s.court_id WHERE s.date=? ORDER BY s.start_hour').all(date);
-  const confirmed=db.prepare(`SELECT COALESCE(SUM(pr.grand_total),0) total FROM private_requests pr JOIN private_slots ps ON ps.request_id=pr.id WHERE pr.status='Confirmed' AND ps.date=?`).get(date) as {total:number};
+  const confirmed=db.prepare(`SELECT COALESCE(SUM(pr.grand_total),0) total FROM private_requests pr WHERE pr.status='Confirmed' AND EXISTS (SELECT 1 FROM private_slots ps WHERE ps.request_id=pr.id AND ps.date=? )`).get(date) as {total:number};
   const counts=db.prepare(`SELECT pr.status,COUNT(DISTINCT pr.id) count FROM private_requests pr JOIN private_slots ps ON ps.request_id=pr.id WHERE ps.date=? GROUP BY pr.status`).all(date);
   res.json({requests,slots,sessions,blocks:db.prepare('SELECT b.*,c.name court_name FROM blocks b JOIN courts c ON c.id=b.court_id WHERE b.date=?').all(date),rosters:sessions,counts,confirmedQuotedValue:confirmed.total});
 });
