@@ -68,3 +68,10 @@ The server creates the schema and seeds Mactan Pickleball Club, four courts, one
 4. Fill Open Play and create a waitlist player, release a spot, and promote the player.
 5. Create a coaching session and verify private court overlap is rejected.
 6. Test a phone-width screen and refresh after a successful lookup.
+
+## Interface updates
+
+- Black-accented, warm-neutral visual system with reduced visual noise
+- Subtle entrance, hover, and modal motion with reduced-motion accessibility support
+- Responsive player and staff layouts optimized for narrow phones
+- All displayed session and booking times use 12-hour AM/PM formatting while backend values remain hourly integers
