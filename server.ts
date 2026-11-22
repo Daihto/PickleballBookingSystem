@@ -25,18 +25,19 @@ CREATE TABLE IF NOT EXISTS sessions (id INTEGER PRIMARY KEY, type TEXT, title TE
 CREATE TABLE IF NOT EXISTS registrations (id INTEGER PRIMARY KEY, session_id INTEGER, player_name TEXT, mobile TEXT, status TEXT, created_at TEXT, UNIQUE(session_id,mobile));
 `;
 db.exec(tables);
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS uq_active_private_slot ON private_slots(court_id,date,start_hour) WHERE status IN ('Pending','Confirmed')`);
 
 function seed() {
   const count = db.prepare('SELECT COUNT(*) c FROM venue').get() as {c:number};
   if (count.c) return;
   db.prepare('INSERT INTO venue(name,address,phone,email) VALUES (?,?,?,?)').run('Mactan Pickleball Club','Mactan Newtown, Lapu-Lapu City, Cebu','0917 555 0148','hello@mactanpickleball.ph');
   const ci = db.prepare('INSERT INTO courts(name,mode,open_hour,close_hour,weekday_rate,weekend_rate) VALUES (?,?,?,?,?,?)');
-  ci.run('Court 1','24h',6,22,300,400); ci.run('Court 2','24h',6,22,400,500); ci.run('Court 3','custom',7,21,350,450); ci.run('Court 4','custom',8,20,350,450);
+  ci.run('Court 1','24h',0,24,300,400); ci.run('Court 2','24h',0,24,400,500); ci.run('Court 3','custom',7,21,350,450); ci.run('Court 4','custom',8,20,350,450);
   const hash = bcrypt.hashSync('staff123',10);
   db.prepare('INSERT INTO staff(name,email,password_hash) VALUES (?,?,?)').run('Venue Staff','staff@mactanpickleball.ph',hash);
-  const today = new Date();
-  const d1 = today.toISOString().slice(0,10);
-  const d2 = new Date(today.getTime()+86400000).toISOString().slice(0,10);
+  const manilaToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-');
+  const d1=manilaToday();
+  const d=new Date(`${d1}T12:00:00+08:00`); d.setDate(d.getDate()+1); const d2=d.toISOString().slice(0,10);
   const si = db.prepare('INSERT INTO sessions(type,title,court_id,date,start_hour,end_hour,skill,fee,capacity,coach) VALUES (?,?,?,?,?,?,?,?,?,?)');
   si.run('Open Play','Saturday Social Doubles',1,d1,8,11,'Intermediate',250,4,'');
   si.run('Open Play','Beginner Rally & Rules',2,d1,13,15,'Beginner',200,6,'Coach Ana');
@@ -64,16 +65,23 @@ function occupied(courtId:number,date:string,start:number,end:number){
 }
 
 app.get('/api/availability',(req,res)=>{
-  const date=String(req.query.date||new Date().toISOString().slice(0,10));
+  const manilaToday=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-');
+  const date=String(req.query.date||manilaToday);
   const courts=db.prepare('SELECT * FROM courts ORDER BY id').all() as any[];
   const weekend=dayWeekend(date);
-  const now=new Date();
-  const manilaNow=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Manila'}));
+  const manilaParts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',hour:'numeric',hourCycle:'h23'}).formatToParts(new Date());
+  const manilaHour=Number(manilaParts.find(p=>p.type==='hour')?.value||0);
   const slots=courts.map((c:any)=>{
     const list=[] as any[];
-    for(let h=c.open_hour;h<c.close_hour;h++){
-      const past=date===manilaNow.toISOString().slice(0,10) ? h<=manilaNow.getHours() : false;
-      list.push({start:h,end:h+1,rate:weekend?c.weekend_rate:c.weekday_rate,status:past?'past':occupied(c.id,date,h,h+1)?'occupied':'available'});
+    if(c.mode==='closed'){
+      for(let h=0;h<24;h++)list.push({start:h,end:h+1,rate:weekend?c.weekend_rate:c.weekday_rate,status:'closed'});
+    }else{
+      const first=c.mode==='24h'?0:c.open_hour;
+      const last=c.mode==='24h'?24:c.close_hour;
+      for(let h=first;h<last;h++){
+        const past=date===manilaToday?h<=manilaHour:false;
+        list.push({start:h,end:h+1,rate:weekend?c.weekend_rate:c.weekday_rate,status:past?'past':occupied(c.id,date,h,h+1)?'occupied':'available'});
+      }
     }
     return {...c,slots:list};
   });
@@ -99,21 +107,30 @@ app.post('/api/quote', (req,res)=>{
 app.post('/api/requests',(req,res)=>{
   const {name,mobile,date,selections=[],paddleQty=0}=req.body;
   if(!name||!mobile||selections.length===0) return res.status(400).json({error:'Name, mobile, date and at least one slot are required'});
-  if(paddleQty>12) return res.status(400).json({error:'Paddle rental stock is 12 pairs'});
+  const requestedPaddles=Math.max(0,Number(paddleQty||0));
+  if(requestedPaddles>12) return res.status(400).json({error:'Paddle rental stock is 12 pairs'});
   const submit=db.transaction(()=>{
-    for(const s of selections){
+    const rented=db.prepare("SELECT COALESCE(SUM(paddle_qty),0) total FROM private_requests WHERE status IN ('Pending','Confirmed')").get() as {total:number};
+    if(rented.total+requestedPaddles>12) throw new Error(`Only ${Math.max(0,12-rented.total)} paddle pair(s) remain in stock`);
+    const uniqueSelections=new Map<string,Selection>();
+    for(const s of selections) uniqueSelections.set(`${s.courtId}-${s.start}`,s);
+    const normalized=[...uniqueSelections.values()] as any[];
+    for(const s of normalized){
       const court=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any;
       if(!court) throw new Error('Unknown court');
-      if(s.start<court.open_hour||s.start+1>court.close_hour) throw new Error(`${court.name} is closed at ${s.start}:00`);
-      if(occupied(court.id,date,s.start,s.start+1)) throw new Error(`${court.name}, ${s.start}:00–${s.start+1}:00 is unavailable`);
+      if(court.mode==='closed') throw new Error(`${court.name} is closed`);
+      const first=court.mode==='24h'?0:court.open_hour;
+      const last=court.mode==='24h'?24:court.close_hour;
+      if(s.start<first||s.start+1>last) throw new Error(`${court.name} is closed at ${formatApiHour(s.start)}`);
+      if(occupied(court.id,date,s.start,s.start+1)) throw new Error(`${court.name}, ${formatApiHour(s.start)}–${formatApiHour(s.start+1)} is unavailable`);
     }
     const weekend=dayWeekend(date); let subtotal=0;
     const reference='MPB-'+Math.random().toString(36).slice(2,8).toUpperCase();
-    for(const s of selections){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; subtotal+=(weekend?c.weekend_rate:c.weekday_rate)}
-    const addTotal=paddleQty*80;
-    const result=db.prepare('INSERT INTO private_requests(reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(reference,name,mobile,'Pending',subtotal,addTotal,subtotal+addTotal,paddleQty,new Date().toISOString());
+    for(const s of normalized){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; subtotal+=(weekend?c.weekend_rate:c.weekday_rate)}
+    const addTotal=requestedPaddles*80;
+    const result=db.prepare('INSERT INTO private_requests(reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at) VALUES (?,?,?,?,?,?,?,?,?)').run(reference,name,mobile,'Pending',subtotal,addTotal,subtotal+addTotal,requestedPaddles,new Date().toISOString());
     const rid=Number(result.lastInsertRowid);
-    for(const s of selections){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; db.prepare('INSERT INTO private_slots(request_id,court_id,date,start_hour,end_hour,rate,status) VALUES (?,?,?,?,?,?,?)').run(rid,c.id,date,s.start,s.start+1,weekend?c.weekend_rate:c.weekday_rate,'Pending')}
+    for(const s of normalized){const c=db.prepare('SELECT * FROM courts WHERE id=?').get(s.courtId) as any; db.prepare('INSERT INTO private_slots(request_id,court_id,date,start_hour,end_hour,rate,status) VALUES (?,?,?,?,?,?,?)').run(rid,c.id,date,s.start,s.start+1,weekend?c.weekend_rate:c.weekday_rate,'Pending')}
     return {reference,status:'Pending'};
   });
   try{res.status(201).json(submit())}catch(e:any){res.status(409).json({error:e.message})}
@@ -130,7 +147,7 @@ app.post('/api/lookup',(req,res)=>{
 app.get('/api/sessions',(req,res)=>{
   const date=req.query.date?String(req.query.date):null;
   const skill=req.query.skill?String(req.query.skill):null;
-  let sql=`SELECT s.*,c.name court_name,(SELECT COUNT(*) FROM registrations r WHERE r.session_id=s.id AND r.status!='Waitlisted' AND r.status!='Declined') registered FROM sessions s JOIN courts c ON c.id=s.court_id WHERE 1=1`;
+  let sql=`SELECT s.*,c.name court_name,(SELECT COUNT(*) FROM registrations r WHERE r.session_id=s.id AND r.status IN ('Pending','Confirmed','Checked-in')) registered FROM sessions s JOIN courts c ON c.id=s.court_id WHERE 1=1`;
   const params:any[]=[]; if(date){sql+=' AND s.date=?';params.push(date)} if(skill&&skill!='All'){sql+=' AND s.skill=?';params.push(skill)} sql+=' ORDER BY s.date,s.start_hour';
   res.json(db.prepare(sql).all(...params));
 });
@@ -141,7 +158,6 @@ app.post('/api/sessions/:id/register',(req,res)=>{
   const transaction=db.transaction(()=>{
     const s=db.prepare('SELECT * FROM sessions WHERE id=?').get(id) as any;if(!s)throw new Error('Session not found');
     if(db.prepare('SELECT 1 FROM registrations WHERE session_id=? AND mobile=? AND status NOT IN (\'Declined\',\'Released\')').get(id,mobile))throw new Error('This mobile number is already registered for the session');
-    if(occupied(s.court_id,s.date,s.start_hour,s.end_hour) && db.prepare('SELECT 1 FROM sessions WHERE id=?').get(id)){}
     const active=db.prepare('SELECT COUNT(*) c FROM registrations WHERE session_id=? AND status IN (\'Pending\',\'Confirmed\',\'Checked-in\')').get(id) as {c:number};
     const status=active.c<s.capacity?'Pending':'Waitlisted';
     db.prepare('INSERT INTO registrations(session_id,player_name,mobile,status,created_at) VALUES (?,?,?,?,?)').run(id,name,mobile,status,new Date().toISOString());
@@ -159,12 +175,12 @@ app.post('/api/staff/login',(req,res)=>{
 });
 
 app.get('/api/staff/dashboard',auth,(req,res)=>{
-  const date=String(req.query.date||new Date().toISOString().slice(0,10));
+  const date=String(req.query.date||manilaDate());
   const requests=db.prepare('SELECT pr.*, (SELECT COUNT(*) FROM private_slots ps WHERE ps.request_id=pr.id) slot_count FROM private_requests pr ORDER BY created_at DESC').all();
   const slots=db.prepare('SELECT ps.*,c.name court_name,pr.reference,pr.player_name,pr.status request_status FROM private_slots ps JOIN courts c ON c.id=ps.court_id JOIN private_requests pr ON pr.id=ps.request_id WHERE ps.date=? ORDER BY ps.start_hour,c.id').all(date);
   const sessions=db.prepare('SELECT s.*,c.name court_name FROM sessions s JOIN courts c ON c.id=s.court_id WHERE s.date=? ORDER BY s.start_hour').all(date);
-  const confirmed=db.prepare("SELECT COALESCE(SUM(grand_total),0) total FROM private_requests WHERE status='Confirmed'").get() as {total:number};
-  const counts=db.prepare('SELECT status,COUNT(*) count FROM private_requests GROUP BY status').all();
+  const confirmed=db.prepare(`SELECT COALESCE(SUM(pr.grand_total),0) total FROM private_requests pr JOIN private_slots ps ON ps.request_id=pr.id WHERE pr.status='Confirmed' AND ps.date=?`).get(date) as {total:number};
+  const counts=db.prepare(`SELECT pr.status,COUNT(DISTINCT pr.id) count FROM private_requests pr JOIN private_slots ps ON ps.request_id=pr.id WHERE ps.date=? GROUP BY pr.status`).all(date);
   res.json({requests,slots,sessions,blocks:db.prepare('SELECT b.*,c.name court_name FROM blocks b JOIN courts c ON c.id=b.court_id WHERE b.date=?').all(date),rosters:sessions,counts,confirmedQuotedValue:confirmed.total});
 });
 
@@ -195,7 +211,7 @@ app.post('/api/staff/blocks',auth,(req,res)=>{
 
 app.post('/api/staff/sessions',auth,(req,res)=>{
   const s=req.body;
-  const tr=db.transaction(()=>{if(occupied(s.courtId,s.date,s.start,s.end))throw new Error('Court time conflicts with an existing booking or session');db.prepare('INSERT INTO sessions(type,title,court_id,date,start_hour,end_hour,skill,fee,capacity,coach) VALUES (?,?,?,?,?,?,?,?,?,?)').run(s.type,s.title,s.courtId,s.date,s.start,s.end,s.skill,s.fee,s.capacity,s.coach||'')});
+  const tr=db.transaction(()=>{db.prepare('INSERT INTO sessions(type,title,court_id,date,start_hour,end_hour,skill,fee,capacity,coach) VALUES (?,?,?,?,?,?,?,?,?,?)').run(s.type,s.title,s.courtId,s.date,s.start,s.end,s.skill,s.fee,s.capacity,s.coach||'')});
   try{tr();res.status(201).json({ok:true})}catch(e:any){res.status(409).json({error:e.message})}
 });
 
@@ -227,3 +243,7 @@ const dist=path.join(process.cwd(),'dist');
 if(fs.existsSync(dist)){app.use(express.static(dist));app.use((req,res,next)=>{if(req.method==='GET')res.sendFile(path.join(dist,'index.html'));else next()})}
 const port=Number(process.env.PORT||3001);
 app.listen(port,()=>console.log(`Pickleball API running at http://localhost:${port}`));
+
+function formatApiHour(hour:number){const normalized=((hour%24)+24)%24;const suffix=normalized>=12?'PM':'AM';const shown=normalized%12||12;return `${shown}:00 ${suffix}`}
+type Selection={courtId:number,start:number};
+function manilaDate(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-')}

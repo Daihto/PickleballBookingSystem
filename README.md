@@ -75,3 +75,9 @@ The server creates the schema and seeds Mactan Pickleball Club, four courts, one
 - Subtle entrance, hover, and modal motion with reduced-motion accessibility support
 - Responsive player and staff layouts optimized for narrow phones
 - All displayed session and booking times use 12-hour AM/PM formatting while backend values remain hourly integers
+
+## Opening and date experience
+
+- The app shows a short branded loading animation on first open.
+- Booking and session date fields use the browser calendar picker and default to Cebu local time.
+- Loading, empty, error, selected, unavailable, and success states are text-labelled as well as color-coded.
