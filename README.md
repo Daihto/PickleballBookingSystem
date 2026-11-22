@@ -1,0 +1,70 @@
+# Mactan Pickleball Club — Booking System
+
+A full-stack demo for player court booking, Open Play, coaching, and staff operations.
+
+## Stack
+
+- React + TypeScript + Vite
+- Express TypeScript API
+- SQLite via `better-sqlite3`
+- JWT staff authentication and bcrypt password hashing
+
+## Run locally
+
+```powershell
+npm install
+npm run dev
+```
+
+- Player app: http://localhost:5173
+- API: http://localhost:3001
+- Demo staff login: `staff@mactanpickleball.ph` / `staff123`
+
+For a production-style local build:
+
+```powershell
+npm run build
+copy .env.example .env
+npm start
+```
+
+SQLite data is stored in `pickleball.db` by default. Delete it and restart to reseed demo data. Copy `.env.example` to `.env` and replace `JWT_SECRET` in real use.
+
+## Demo data
+
+The server creates the schema and seeds Mactan Pickleball Club, four courts, one demo staff account, and Open Play/Coaching sessions. Venue and court settings are stored in SQLite and can be changed in Staff → Courts.
+
+## Assumptions
+
+- Slots are one hour in Cebu/Asia-Manila date conventions.
+- Pending and confirmed private bookings, sessions, and staff blocks share court availability.
+- Submitted quote values are snapshotted. Later rate changes do not alter old quotes.
+- Paddle rentals are ₱80 each with stock of 12.
+- Pending, confirmed, and checked-in session registrations count toward capacity; waitlisted players do not.
+- Declined/cancelled private bookings release slots.
+- SQLite transactions and server-side conflict checks prevent simultaneous slot claims and stock oversubscription.
+
+## Completed features
+
+- Multi-court multi-slot booking, court tabs, grouped slots, paddle rental, quote review, status lookup
+- Open Play and Coaching filters and registration/waitlist flows
+- Staff JWT sign-in and protected APIs
+- Request confirm/decline/cancel, manual booking, court blocking
+- Session creation and roster confirm/check-in/release/promote
+- Venue/court settings and weekday/weekend pricing
+- Reports and responsive layouts
+
+## Known limitations
+
+- No live payment or email/SMS integration
+- Staff manual and block actions use browser prompts
+- No CSV export or QR check-in
+
+## Manual acceptance checklist
+
+1. Player submits two-court + paddle booking, staff confirms, and player looks it up by reference/mobile.
+2. Change a court rate after submission and verify the stored quote stays unchanged.
+3. Submit overlapping requests in separate browser contexts; one should be rejected.
+4. Fill Open Play and create a waitlist player, release a spot, and promote the player.
+5. Create a coaching session and verify private court overlap is rejected.
+6. Test a phone-width screen and refresh after a successful lookup.
