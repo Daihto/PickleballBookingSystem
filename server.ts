@@ -196,6 +196,10 @@ app.get('/api/staff/dashboard',auth,(req,res)=>{
 app.post('/api/staff/requests/:id/status',auth,(req,res)=>{
   const id=Number(req.params.id); const status=req.body.status;
   if(!['Confirmed','Declined','Cancelled'].includes(status))return res.status(400).json({error:'Invalid status'});
+  const request=db.prepare('SELECT status FROM private_requests WHERE id=?').get(id) as {status:string}|undefined;
+  if(!request)return res.status(404).json({error:'Booking request not found'});
+  const allowedTransitions:Record<string,string[]>={Pending:['Confirmed','Declined'],Confirmed:['Cancelled']};
+  if(!allowedTransitions[request.status]?.includes(status))return res.status(409).json({error:`Cannot change a ${request.status} request to ${status}`});
   db.transaction(()=>{db.prepare('UPDATE private_requests SET status=? WHERE id=?').run(status,id);db.prepare('UPDATE private_slots SET status=? WHERE request_id=?').run(status,id)})();
   res.json({ok:true});
 });
@@ -230,12 +234,16 @@ app.get('/api/staff/sessions/:id/roster',auth,(req,res)=>{
 app.post('/api/staff/registrations/:id/status',auth,(req,res)=>{
   const id=Number(req.params.id);const {status}=req.body;
   const reg=db.prepare('SELECT * FROM registrations WHERE id=?').get(id) as any;if(!reg)return res.status(404).json({error:'Registration not found'});
-  if(status==='Promoted'){
+  const validActions=['Promoted','Promote','Confirmed','Checked-in','Declined','Released'];
+  if(!validActions.includes(status))return res.status(400).json({error:'Invalid registration status'});
+  const allowedTransitions:Record<string,string[]>={Pending:['Confirmed','Declined','Released'],Confirmed:['Checked-in','Released'],'Checked-in':['Released'],Waitlisted:['Promoted','Promote','Released']};
+  if(!allowedTransitions[reg.status]?.includes(status))return res.status(409).json({error:`Cannot change a ${reg.status} registration to ${status}`});
+  if(status==='Promoted'||status==='Promote'){
     const s=db.prepare('SELECT * FROM sessions WHERE id=?').get(reg.session_id) as any;
     const count=db.prepare("SELECT COUNT(*) c FROM registrations WHERE session_id=? AND status IN ('Pending','Confirmed','Checked-in')").get(reg.session_id) as {c:number};
     if(count.c>=s.capacity)return res.status(409).json({error:'Session is full'});
     db.prepare('UPDATE registrations SET status=? WHERE id=?').run('Pending',id);
-  }else if(['Confirmed','Checked-in','Declined','Released'].includes(status))db.prepare('UPDATE registrations SET status=? WHERE id=?').run(status,id);
+  }else db.prepare('UPDATE registrations SET status=? WHERE id=?').run(status,id);
   res.json({ok:true});
 });
 
@@ -247,11 +255,6 @@ app.post('/api/staff/courts/:id/settings',auth,(req,res)=>{
 app.post('/api/staff/venue',auth,(req,res)=>{
   const v=req.body; db.prepare('UPDATE venue SET name=?,address=?,phone=?,email=? WHERE id=1').run(v.name,v.address,v.phone,v.email); res.json({ok:true});
 });
-
-const dist=path.join(process.cwd(),'dist');
-if(fs.existsSync(dist)){app.use(express.static(dist));app.use((req,res,next)=>{if(req.method==='GET')res.sendFile(path.join(dist,'index.html'));else next()})}
-const port=Number(process.env.PORT||3001);
-app.listen(port,()=>console.log(`Pickleball API running at http://localhost:${port}`));
 
 function formatApiHour(hour:number){const normalized=((hour%24)+24)%24;const suffix=normalized>=12?'PM':'AM';const shown=normalized%12||12;return `${shown}:00 ${suffix}`}
 type Selection={courtId:number,start:number};
@@ -284,3 +287,14 @@ app.get('/api/player/me',(req,res)=>{
     res.json({player,requests,sessions});
   }catch(e){res.status(401).json({error:'Player sign-in required'})}
 });
+
+const dist=path.join(process.cwd(),'dist');
+if(fs.existsSync(dist)){
+  app.use(express.static(dist));
+  app.use((req,res,next)=>{
+    if(req.method==='GET'&&!req.path.startsWith('/api'))res.sendFile(path.join(dist,'index.html'));
+    else next();
+  });
+}
+const port=Number(process.env.PORT||3001);
+app.listen(port,()=>console.log(`Pickleball API running at http://localhost:${port}`));
