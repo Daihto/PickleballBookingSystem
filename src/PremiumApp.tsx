@@ -19,15 +19,65 @@ function BallMark({small=false}:{small?:boolean}){
   </svg>
 }
 
-function Starter(){return <div className="starter" role="status" aria-live="polite"><div className="starter-court"><span/><span/><span/></div><BallMark/><p>Preparing your court</p><div className="starter-progress"><i/></div></div>}
+function Starter(){return <div className="starter" role="status" aria-live="polite"><div className="starter-court"><span/><span/><span/></div><div className="starter-ball"><BallMark/></div><div className="starter-brand"><span>Mactan</span><strong>Pickleball Club</strong></div><div className="starter-progress"><i/></div></div>}
 
 export default function PremiumApp(){
- const [view,setView]=useState<View>('book'); const [starting,setStarting]=useState(true); const [venue,setVenue]=useState<any>(null)
- useEffect(()=>{api('/api/bootstrap').then(data=>{setVenue(data);setStarting(false)}).catch(()=>setStarting(false))},[])
+ const [view,setView]=useState<View>('book'); const [starting,setStarting]=useState(true); const [entered,setEntered]=useState(sessionStorage.getItem('mactanEntered')==='true'); const [venue,setVenue]=useState<any>(null)
+ useEffect(()=>{api('/api/bootstrap').then(data=>setVenue(data)).catch(()=>{});const timer=window.setTimeout(()=>setStarting(false),2600);return()=>window.clearTimeout(timer)},[])
  if(starting)return <Starter/>
+ if(!entered)return <EntryView onEnter={(nextView)=>{sessionStorage.setItem('mactanEntered','true');setEntered(true);if(nextView)setView(nextView)}}/>
  return <div className="app"><header className="topbar"><button className="brand" onClick={()=>setView('book')}><BallMark small/><span><b>{venue?.venue?.name||'Mactan Pickleball Club'}</b><small>Mactan · Cebu</small></span></button><nav className="nav" aria-label="Main navigation"><button className={view==='book'?'active':''} onClick={()=>setView('book')}>Book a court</button><button className={view==='open'?'active':''} onClick={()=>setView('open')}>Open Play</button><button className={view==='coaching'?'active':''} onClick={()=>setView('coaching')}>Coaching</button><button className={view==='lookup'?'active':''} onClick={()=>setView('lookup')}>My booking</button><button className={view==='account'?'active':''} onClick={()=>setView('account')}>Player account</button></nav><button className="staff-button" onClick={()=>setView('staff')}>Staff</button></header>
   <main>{view==='book'?<BookingView/>:view==='open'?<SessionsView type="Open Play"/>:view==='coaching'?<SessionsView type="Coaching"/>:view==='lookup'?<LookupView/>:view==='account'?<PlayerAccountView/>:<StaffView/>}</main>
  </div>
+}
+
+function EntryView({onEnter}:{onEnter:(view?:View)=>void}){
+ const [role,setRole]=useState<'player'|'staff'>('player')
+ const [mode,setMode]=useState<'login'|'register'>('login')
+ const [name,setName]=useState('')
+ const [mobile,setMobile]=useState('')
+ const [pin,setPin]=useState('')
+ const [email,setEmail]=useState('staff@mactanpickleball.ph')
+ const [password,setPassword]=useState('staff123')
+ const [error,setError]=useState('')
+ const submit=async()=>{
+  setError('')
+  try{
+   if(role==='staff'){
+    const r=await api('/api/staff/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})})
+    localStorage.setItem('staffToken',r.token)
+    onEnter('staff')
+   }else{
+    const r=await api('/api/player/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mobile,pin})})
+    localStorage.setItem('playerToken',r.token)
+    onEnter('account')
+   }
+  }catch(e:any){setError(e.message)}
+ }
+ return <section className="entry-page">
+  <div className="entry-brand"><BallMark/><span><b>Mactan</b><strong>Pickleball Club</strong></span></div>
+  <div className="entry-card">
+   <span className="kicker">Welcome to Mactan</span>
+   <h1>{role==='staff'?'Staff access':mode==='register'?'Create your account':'Sign in to play'}</h1>
+   <p className="entry-copy">Reserve courts, join sessions, and keep every booking in one place.</p>
+   <div className="role-switch" aria-label="Choose account type">
+    <button className={role==='player'?'active':''} onClick={()=>{setRole('player');setError('')}}><span>Player</span><small>Book courts & sessions</small></button>
+    <button className={role==='staff'?'active':''} onClick={()=>{setRole('staff');setError('')}}><span>Staff</span><small>Manage venue operations</small></button>
+   </div>
+   {role==='player'?<>
+    <div className="account-mode"><button className={mode==='login'?'active':''} onClick={()=>{setMode('login');setError('')}}>Sign in</button><button className={mode==='register'?'active':''} onClick={()=>{setMode('register');setError('')}}>Create account</button></div>
+    {mode==='register'&&<label><span>Name</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Full name"/></label>}
+    <label><span>Mobile number</span><input value={mobile} onChange={e=>setMobile(e.target.value)} inputMode="tel" placeholder="09XX XXX XXXX"/></label>
+    <label><span>4-digit PIN</span><input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,''))} placeholder="1234"/></label>
+   </>:<>
+    <label><span>Staff email</span><input value={email} onChange={e=>setEmail(e.target.value)} placeholder="staff@mactanpickleball.ph"/></label>
+    <label><span>Password</span><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password"/></label>
+   </>}
+   {error&&<div className="form-error">{error}</div>}
+   <button className="primary entry-submit" disabled={role==='player'?!mobile||pin.length!==4||(mode==='register'&&!name):!email||!password} onClick={submit}>{role==='staff'?'Open staff console':mode==='login'?'Sign in':'Create player account'}</button>
+   <button className="entry-guest" onClick={()=>onEnter()}>Continue as guest</button>
+  </div>
+ </section>
 }
 
 function BookingView(){
