@@ -752,6 +752,59 @@ select:focus-visible {
   text-underline-offset: 3px;
 }
 
+.name-fields {
+  min-width: 0;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+}
+
+.name-fields legend {
+  width: 100%;
+  padding: 0;
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.name-fields label {
+  min-width: 0;
+}
+
+.name-fields label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.name-fields label > span small {
+  color: var(--muted-2);
+  font-size: inherit;
+  font-weight: 500;
+}
+
+.name-fields input {
+  min-width: 0;
+}
+
+.review-form .name-fields {
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+}
+
+.review-form .name-fields label,
+.entry-card .name-fields label,
+.modal .name-fields label,
+.login-card .name-fields label,
+.staff-form-grid .name-fields label {
+  margin: 0;
+}
+
 .form-error {
   margin: 10px 16px;
   border: 1px solid rgba(239, 157, 145, 0.32);
@@ -1867,6 +1920,14 @@ select:focus-visible {
 
   .staff-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .name-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .name-fields label:nth-of-type(3) {
+    grid-column: 1 / -1;
   }
 
   .staff-form-actions {
