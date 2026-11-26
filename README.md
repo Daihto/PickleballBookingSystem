@@ -1,113 +1,70 @@
 # Mactan Pickleball Club — Booking System
 
-A full-stack demo for player court booking, Open Play, coaching, and staff operations.
+A full-stack booking application for private court reservations, Open Play, coaching, and staff operations.
 
 ## Stack
 
-- React + TypeScript + Vite
-- Express TypeScript API
-- SQLite via `better-sqlite3`
-- JWT staff authentication and bcrypt password hashing
+- React, TypeScript, and Vite
+- Express API
+- SQLite (`better-sqlite3`) with persistent local storage
+- bcrypt password/PIN hashing and signed, expiring JWTs
 
 ## Run locally
 
-```powershell
+Requires Node.js 20.19 or newer.
+
+```sh
 npm install
+cp .env.example .env
 npm run dev
 ```
 
 - Player app: http://localhost:5173
 - API: http://localhost:3001
-- Demo staff login: `staff@mactanpickleball.ph` / `staff123`
 
-For a production-style local build:
+The first local database is seeded once with venue details, four courts, a development staff account, and sample sessions. The local-only staff login is `staff@mactanpickleball.ph` / `staff123`. Staff credentials are not prefilled in the UI.
 
-```powershell
+Run the application checks:
+
+```sh
+npm test
 npm run build
-copy .env.example .env
-npm start
+npm run lint
 ```
 
-SQLite data is stored in `pickleball.db` by default. Delete it and restart to reseed demo data. Copy `.env.example` to `.env` and replace `JWT_SECRET` in real use.
+`npm start` serves the production build and API together after `npm run build`.
 
-## Demo data
+## Data and migrations
 
-The server creates the schema and seeds Mactan Pickleball Club, four courts, one demo staff account, and Open Play/Coaching sessions. Venue and court settings are stored in SQLite and can be changed in Staff → Courts.
+The default SQLite file is `pickleball.db` in the working directory. Set `DB_PATH` to an absolute path on durable storage when deploying. The application adds its schema migrations at startup; migrations preserve existing bookings, sessions, and registrations. Seeds are inserted only when the corresponding tables are empty; restarting does not reset user data.
 
-## Assumptions
+Back up the database before upgrading or moving it. Deleting the database permanently removes all saved bookings, accounts, registrations, settings, and staff credentials; it is not a routine reset step.
 
-- Slots are one hour in Cebu/Asia-Manila date conventions.
-- Pending and confirmed private bookings, sessions, and staff blocks share court availability.
-- Submitted quote values are snapshotted. Later rate changes do not alter old quotes.
-- Paddle rentals are ₱80 each with stock of 12.
-- Pending, confirmed, and checked-in session registrations count toward capacity; waitlisted players do not.
-- Declined/cancelled private bookings release slots.
-- SQLite transactions and server-side conflict checks prevent simultaneous slot claims and stock oversubscription.
+SQLite transactions, overlap triggers, and unique indexes protect court slots, published sessions, blocks, and active registrations. Submitted rates and equipment totals are stored with each booking, so later settings changes do not rewrite existing quotes. Equipment stock is checked against overlapping bookings.
 
-## Completed features
+## Production configuration
 
-- Multi-court multi-slot booking, court tabs, grouped slots, paddle rental, quote review, status lookup
-- Open Play and Coaching filters and registration/waitlist flows
-- Staff JWT sign-in and protected APIs
-- Request confirm/decline/cancel, manual booking, court blocking
-- Session creation and roster confirm/check-in/release/promote
-- Venue/court settings and weekday/weekend pricing
-- Reports and responsive layouts
+Use a persistent disk for the database and set these environment variables:
 
-## Known limitations
+```text
+NODE_ENV=production
+DB_PATH=/path/on/persistent/storage/pickleball.db
+JWT_SECRET=<a unique random secret of at least 32 characters>
+INITIAL_STAFF_PASSWORD=<a strong initial password for a new database>
+```
 
-- No live payment or email/SMS integration
-- Staff manual and block actions use browser prompts
-- No CSV export or QR check-in
+`INITIAL_STAFF_PASSWORD` is only used when a database has no staff account. The development fallback password and JWT secret are not used in production. Keep `.env` and database files private, and do not use temporary storage if bookings must survive a redeploy.
 
-## Manual acceptance checklist
+## Implemented workflows
 
-1. Player submits two-court + paddle booking, staff confirms, and player looks it up by reference/mobile.
-2. Change a court rate after submission and verify the stored quote stays unchanged.
-3. Submit overlapping requests in separate browser contexts; one should be rejected.
-4. Fill Open Play and create a waitlist player, release a spot, and promote the player.
-5. Create a coaching session and verify private court overlap is rejected.
-6. Test a phone-width screen and refresh after a successful lookup.
+- Live availability from SQLite, multi-court/hour selection, database-priced quotes, equipment inventory, atomic booking submission, unique references, and status lookup.
+- Player registration/login and persistent booking/session history.
+- Published Open Play and coaching sessions, skill/date filters, capacity checks, duplicate prevention, waitlists, and automatic FIFO promotion after a spot is released.
+- Protected staff login/logout and dashboard operations for booking review, manual bookings, court blocks, session creation/editing/publishing, rosters, check-in, venue details, hours/weekly closures, pricing, equipment settings, and date-based reports.
+- Asia/Manila date calculations and Philippine peso display.
 
-## Interface updates
+## Limitations
 
-- Black-accented, warm-neutral visual system with reduced visual noise
-- Subtle entrance, hover, and modal motion with reduced-motion accessibility support
-- Responsive player and staff layouts optimized for narrow phones
-- All displayed session and booking times use 12-hour AM/PM formatting while backend values remain hourly integers
-
-## Opening and date experience
-
-- The app shows a short branded loading animation on first open.
-- Booking and session date fields use the browser calendar picker and default to Cebu local time.
-- Loading, empty, error, selected, unavailable, and success states are text-labelled as well as color-coded.
-
-## Data model
-
-SQLite tables store venues, staff, courts, private requests and slots, maintenance blocks, sessions, and session registrations. Shared court availability checks private slots, blocks, and sessions before saving. A partial unique index rejects duplicate active private court slots.
-
-## Deployment and persistence
-
-The local database is `pickleball.db`. Render deployments may use `DB_PATH=/tmp/pickleball.db` for a temporary demo or a persistent disk at `/var/data/pickleball.db`. The README and demo must disclose whether deployed data is temporary.
-
-## Test coverage checklist
-
-- Multi-court and paddle quote submission
-- Private request staff confirmation and player reference lookup
-- Server-side conflict and stock rechecks
-- Cancellation and decline slot release
-- Open Play, coaching, filters, waitlist, check-in, and promotion
-- Staff JWT authorization
-- Phone-width responsive layout and 12-hour Cebu time display
-
-## Premium interface
-
-- Custom particle-inspired pickleball opening screen
-- Cohesive court-reservation and staff-operations design system
-- Responsive player booking, sessions, lookup, and staff views
-- Subtle entrance, loading, hover, and success feedback
-- Reduced-motion support for accessibility
-
-## Custom domain
-
-A custom domain is not bundled with source code. In Render, open the service, select **Custom Domains**, and add the chosen hostname. Then create the DNS records Render provides at the domain registrar, typically a CNAME for a subdomain or A/ALIAS records for an apex domain. Wait for DNS verification before treating the Render URL as the primary public address.
+- Payments, email/SMS notifications, QR check-in, and CSV export are not integrated.
+- SQLite is suitable for a single-instance deployment on persistent storage. Multi-instance deployments should use a shared database with equivalent transaction and constraint guarantees.
+- The bundled staff account is for local development only. Provision a strong initial password and rotate it before production use.

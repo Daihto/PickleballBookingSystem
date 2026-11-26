@@ -1274,6 +1274,37 @@ select:focus-visible {
   color: var(--muted);
 }
 
+.session-row,
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 4px;
+}
+
+.session-row > button:first-child div,
+.roster-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roster-row > div:first-child {
+  flex: 1;
+}
+
 .review-row {
   display: flex;
   justify-content: space-between;
@@ -1801,7 +1832,14 @@ select:focus-visible {
   .slot-grid,
   .session-grid,
   .staff-columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .booking-grid > *,
+  .booking-flow,
+  .panel,
+  .summary {
+    min-width: 0;
   }
 
   .summary {
@@ -1813,10 +1851,13 @@ select:focus-visible {
   }
 
   .staff-page {
+    min-width: 0;
     grid-template-columns: 1fr;
   }
 
   .staff-sidebar {
+    width: 100%;
+    min-width: 0;
     position: sticky;
     top: 68px;
     z-index: 20;
@@ -1824,6 +1865,7 @@ select:focus-visible {
     display: flex;
     align-items: center;
     padding: 8px;
+    overflow: hidden;
   }
 
   .staff-venue {
@@ -1832,6 +1874,8 @@ select:focus-visible {
 
   .staff-sidebar nav {
     display: flex;
+    flex: 1;
+    min-width: 0;
     overflow-x: auto;
   }
 
@@ -1841,11 +1885,24 @@ select:focus-visible {
 
   .staff-signout {
     position: static;
+    flex-shrink: 0;
     margin-left: auto;
   }
 
   .staff-content {
+    width: 100%;
+    min-width: 0;
     padding: 18px;
+  }
+
+  .staff-header,
+  .staff-columns > * {
+    min-width: 0;
+  }
+
+  .staff-header {
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .metrics {
