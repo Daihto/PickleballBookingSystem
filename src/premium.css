@@ -58,6 +58,11 @@ select {
   font: inherit;
 }
 
+input,
+select {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
 button {
   cursor: pointer;
 }
@@ -91,6 +96,26 @@ select:focus-visible {
 
 .app main > * {
   animation: pageReveal 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.motion-reveal.motion-pending {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+}
+
+.motion-reveal.motion-pending:focus-within {
+  opacity: 1;
+  transform: none;
+}
+
+.motion-reveal.motion-visible {
+  animation: motionReveal 480ms cubic-bezier(0.2, 0.75, 0.25, 1) backwards;
+  animation-delay: var(--motion-stagger, 0ms);
+}
+
+.motion-reveal.motion-visible.motion-stat {
+  animation-name: motionStatReveal;
+  animation-duration: 420ms;
 }
 
 .topbar {
@@ -140,12 +165,17 @@ select:focus-visible {
   width: 42px;
   height: 42px;
   filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
-  animation: ballFloat 3.6s ease-in-out infinite;
+  transition: transform 220ms ease;
 }
 
 .ball-mark.small {
   width: 34px;
   height: 34px;
+}
+
+.brand:hover .ball-mark,
+.entry-brand:hover .ball-mark {
+  transform: translateY(-2px) rotate(4deg);
 }
 
 .staff-button {
@@ -1226,6 +1256,7 @@ select:focus-visible {
   font-weight: 850;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 .status.pending {
@@ -1838,6 +1869,13 @@ select:focus-visible {
   min-width: 0;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
+  transition: background-color 180ms ease;
+}
+
+.session-row:hover,
+.roster-row:hover,
+.review-row:hover {
+  background-color: var(--surface-hover);
 }
 
 .session-row > button:first-child {
@@ -2272,11 +2310,6 @@ select:focus-visible {
   to { transform: rotate(360deg); }
 }
 
-@keyframes ballFloat {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50% { transform: translateY(-4px) rotate(3deg); }
-}
-
 @keyframes progress {
   from { transform: translateX(-100%); }
   to { transform: translateX(330%); }
@@ -2318,8 +2351,13 @@ select:focus-visible {
   to { opacity: 1; transform: none; }
 }
 
-@keyframes scrollReveal {
-  from { opacity: 0; transform: translateY(18px) scale(0.99); }
+@keyframes motionReveal {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes motionStatReveal {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); }
   to { opacity: 1; transform: none; }
 }
 
@@ -2622,32 +2660,19 @@ select:focus-visible {
   }
 }
 
-@supports (animation-timeline: view()) {
-  .app main :is(
-    .page-intro,
-    .player-nav,
-    .booking-layout,
-    .session-controls,
-    .session-grid,
-    .staff-columns > .staff-panel,
-    .metrics,
-    .calendar-panel,
-    .overview-reviews,
-    .settings-panel
-  ) {
-    animation: scrollReveal linear both;
-    animation-timeline: view();
-    animation-range: entry 0% entry 35%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .motion-reveal.motion-pending {
+    opacity: 1;
+    transform: none;
   }
 }

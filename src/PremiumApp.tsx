@@ -112,6 +112,109 @@ export default function PremiumApp(){
   void Promise.all([minimumDuration,restoreSession()]).then(()=>{if(active)setStarting(false)}).finally(()=>window.clearTimeout(validationTimeout))
   return()=>{active=false;controller.abort();window.clearTimeout(timer);window.clearTimeout(validationTimeout)}
  },[])
+ useEffect(()=>{
+  if(!('IntersectionObserver' in window))return
+  const root=document.getElementById('root')
+  if(!root)return
+  const motionPreference=window.matchMedia('(prefers-reduced-motion: reduce)')
+  const revealSelector=[
+   '.page-intro',
+   '.player-nav',
+   '.booking-layout',
+   '.session-controls',
+   '.session-grid',
+   '.staff-panel',
+   '.metrics article',
+   '.metrics article b',
+   '.court-editor',
+   '.review-row',
+   '.session-row',
+   '.roster-row',
+   '.table-wrap',
+   '.form-error',
+   '.success-inline',
+   '.success-card',
+   '.empty-state',
+   '.loading-inline',
+  ].join(',')
+  const staggerSelector='.metrics article,.session-card,.court-editor,.review-row,.session-row,.roster-row,.table-wrap tbody tr'
+  const observed=new Set<Element>()
+  const observer=new IntersectionObserver(entries=>{
+   for(const entry of entries){
+    if(!entry.isIntersecting)continue
+    entry.target.classList.remove('motion-pending')
+    entry.target.classList.add('motion-visible')
+    observer.unobserve(entry.target)
+    observed.delete(entry.target)
+   }
+  },{threshold:0.08,rootMargin:'0px 0px -24px 0px'})
+  const collect=(node:Node)=>{
+   if(!(node instanceof Element))return
+   const candidates:Element[]=[]
+   if(node.matches(revealSelector))candidates.push(node)
+   candidates.push(...node.querySelectorAll(revealSelector))
+   for(const element of candidates){
+    if(element.classList.contains('motion-visible')||observed.has(element))continue
+    element.classList.add('motion-reveal')
+    if(element.matches('.metrics article b'))element.classList.add('motion-stat')
+    if(element instanceof HTMLElement&&element.matches(staggerSelector)){
+     const siblings=Array.from(element.parentElement?.children||[]).filter(sibling=>sibling.matches(staggerSelector))
+     element.style.setProperty('--motion-stagger',`${Math.max(0,Math.min(siblings.indexOf(element),5))*45}ms`)
+    }
+    if(motionPreference.matches){
+     element.classList.remove('motion-pending')
+     element.classList.add('motion-visible')
+     continue
+    }
+    const bounds=element.getBoundingClientRect()
+    if(bounds.top<window.innerHeight&&bounds.bottom>0){
+     element.classList.remove('motion-pending')
+     element.classList.add('motion-visible')
+    }
+    else{
+     element.classList.add('motion-pending')
+     observer.observe(element)
+     observed.add(element)
+    }
+   }
+  }
+  const clearPending=(node:Node)=>{
+   if(!(node instanceof Element))return
+   const pending:Element[]=[]
+   if(node.matches('.motion-reveal.motion-pending'))pending.push(node)
+   pending.push(...node.querySelectorAll('.motion-reveal.motion-pending'))
+   for(const element of pending){
+    if(!observed.delete(element))continue
+    observer.unobserve(element)
+    element.classList.remove('motion-pending')
+   }
+  }
+  const mutations=new MutationObserver(records=>{
+   for(const record of records){
+    record.removedNodes.forEach(clearPending)
+    record.addedNodes.forEach(collect)
+   }
+  })
+  const onMotionPreferenceChange=()=>{
+   if(!motionPreference.matches)return
+   for(const element of observed){
+    element.classList.remove('motion-pending')
+    element.classList.add('motion-visible')
+    observer.unobserve(element)
+   }
+   observed.clear()
+  }
+  collect(root)
+  mutations.observe(root,{childList:true,subtree:true})
+  motionPreference.addEventListener('change',onMotionPreferenceChange)
+  return()=>{
+   mutations.disconnect()
+   observer.disconnect()
+   motionPreference.removeEventListener('change',onMotionPreferenceChange)
+   observed.forEach(element=>element.classList.remove('motion-pending'))
+   observed.clear()
+  }
+ },[])
  if(starting)return <Starter/>
  if(!entered)return <EntryView notice={authNotice} onEnter={(nextView)=>{if(nextView==='staff')localStorage.removeItem('playerToken');else localStorage.removeItem('staffToken');setAuthNotice('');setEntered(true);setView(nextView)}}/>
  return <div className="app"><header className="topbar"><button className="brand" onClick={()=>setView(view==='staff'?'staff':'account')}><BallMark small/><span><b>{venue?.venue?.name||'Mactan Pickleball Club'}</b><small>{view==='staff'?'Administrator console':'Player account'}</small></span></button>{view==='staff'&&<span className="topbar-role">Administrator</span>}</header>
