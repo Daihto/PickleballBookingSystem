@@ -6,6 +6,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { after, before, test } from 'node:test';
+import bcrypt from 'bcryptjs';
 import Database from 'better-sqlite3';
 
 const root = process.cwd();
@@ -93,6 +94,13 @@ async function loginStaff(url: string): Promise<string> {
 }
 
 before(async () => {
+  const legacyDb = new Database(databasePath);
+  legacyDb.exec(`CREATE TABLE player_accounts (
+    id INTEGER PRIMARY KEY, name TEXT NOT NULL, mobile TEXT UNIQUE NOT NULL, pin_hash TEXT NOT NULL, created_at TEXT
+  )`);
+  legacyDb.prepare('INSERT INTO player_accounts(name,mobile,pin_hash,created_at) VALUES (?,?,?,?)')
+    .run('Legacy Player', '09170000099', bcrypt.hashSync('4321', 12), new Date().toISOString());
+  legacyDb.close();
   const started = await startServer(databasePath);
   server = started.process;
   baseUrl = started.url;
@@ -104,14 +112,29 @@ after(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
+test('legacy player credentials survive the password-column migration', async () => {
+  const login = await call('/api/player/login', {
+    body: { mobile: '09170000099', password: '4321' },
+  });
+  assert.equal(login.status, 200);
+  assert.equal((login.body as any).player.name, 'Legacy Player');
+});
+
 test('player booking persists, is shared with staff, snapshots pricing, and releases availability on cancellation', async () => {
   const date = futureDate(20);
   const mobile = '09171234567';
+  const weakPassword = await call('/api/player/register', {
+    body: { name: 'Test Player', mobile, password: '1234' },
+  });
+  assert.equal(weakPassword.status, 400);
   const account = await call('/api/player/register', {
-    body: { name: 'Test Player', mobile, pin: '1234' },
+    body: { name: 'Test Player', mobile, password: 'Test-Player-Password-1' },
   });
   assert.equal(account.status, 201);
   const playerToken = (account.body as any).token as string;
+  assert.equal((await call('/api/player/login', {
+    body: { mobile, password: 'Test-Player-Password-1' },
+  })).status, 200);
   assert.equal((await call('/api/requests', {
     body: {
       name: 'Test Player', mobile, date,
@@ -372,7 +395,7 @@ test('equipment stock and session capacity, waitlist promotion, and court confli
   })).status, 409);
 
   const firstAccount = await call('/api/player/register', {
-    body: { name: 'First Player', mobile: '09170000028', pin: '1234' },
+    body: { name: 'First Player', mobile: '09170000028', password: 'Player-Password-28' },
   });
   const firstPlayerToken = (firstAccount.body as any).token as string;
   const first = await call(`/api/sessions/${sessionId}/register`, {
@@ -427,7 +450,7 @@ test('equipment stock and session capacity, waitlist promotion, and court confli
 
 test('staff logout revokes its token and protected routes reject player tokens', async () => {
   const player = await call('/api/player/register', {
-    body: { name: 'Auth Player', mobile: '09170000030', pin: '4321' },
+    body: { name: 'Auth Player', mobile: '09170000030', password: 'Player-Password-30' },
   });
   const playerToken = (player.body as any).token as string;
   assert.equal((await call('/api/staff/dashboard', { token: playerToken })).status, 401);

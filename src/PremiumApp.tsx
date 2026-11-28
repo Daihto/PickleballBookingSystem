@@ -125,7 +125,6 @@ function EntryView({notice,onEnter}:{notice:string,onEnter:(view:'staff'|'accoun
  const [mode,setMode]=useState<'login'|'register'>('login')
  const [nameParts,setNameParts]=useState<NameParts>(emptyName)
  const [mobile,setMobile]=useState('')
- const [pin,setPin]=useState('')
  const [email,setEmail]=useState('')
  const [password,setPassword]=useState('')
  const [error,setError]=useState('')
@@ -138,7 +137,7 @@ function EntryView({notice,onEnter}:{notice:string,onEnter:(view:'staff'|'accoun
     localStorage.setItem('staffToken',r.token)
     onEnter('staff')
    }else{
-    const r=await api('/api/player/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mobile,pin})})
+    const r=await api('/api/player/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mobile,password})})
     localStorage.setItem('playerToken',r.token)
     onEnter('account')
    }
@@ -159,13 +158,13 @@ function EntryView({notice,onEnter}:{notice:string,onEnter:(view:'staff'|'accoun
     <div className="account-mode"><button className={mode==='login'?'active':''} onClick={()=>{setMode('login');setError('')}}>Sign in</button><button className={mode==='register'?'active':''} onClick={()=>{setMode('register');setError('')}}>Create account</button></div>
     {mode==='register'&&<NameFields value={nameParts} onChange={setNameParts} idPrefix="entry"/>}
     <label><span>Mobile number</span><input type="tel" name="tel" autoComplete="tel-national" inputMode="tel" maxLength={11} pattern="09[0-9]{9}" required value={mobile} onChange={e=>setMobile(e.target.value.replace(/\D/g,'').slice(0,11))} placeholder="09XXXXXXXXX"/></label>
-    <label><span>4-digit PIN</span><input type="password" autoComplete={mode==='register'?'new-password':'current-password'} inputMode="numeric" maxLength={4} required value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,''))} placeholder="4 digits"/></label>
+    <label><span>Password</span><input type="password" autoComplete={mode==='register'?'new-password':'current-password'} maxLength={72} minLength={mode==='register'?8:undefined} required value={password} onChange={e=>setPassword(e.target.value)} placeholder={mode==='register'?'At least 8 characters':'Password'}/></label>
    </>:<>
     <label><span>Administrator email</span><input type="email" name="username" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="staff@mactanpickleball.ph"/></label>
     <label><span>Password</span><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password"/></label>
    </>}
    {error&&<div className="form-error">{error}</div>}
-   <button className="primary entry-submit" disabled={role==='player'?!isValidMobile(mobile)||pin.length!==4||(mode==='register'&&!isNameComplete(nameParts)):!email||!password} onClick={submit}>{role==='staff'?'Open administrator dashboard':mode==='login'?'Sign in':'Create player account'}</button>
+   <button className="primary entry-submit" disabled={role==='player'?!isValidMobile(mobile)||!password||(mode==='register'&&(!isNameComplete(nameParts)||password.length<8)):!email||!password} onClick={submit}>{role==='staff'?'Open administrator dashboard':mode==='login'?'Sign in':'Create player account'}</button>
   </div>
  </section>
 }

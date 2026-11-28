@@ -53,7 +53,7 @@ db.exec(`
     created_at TEXT, FOREIGN KEY(session_id) REFERENCES sessions(id)
   );
   CREATE TABLE IF NOT EXISTS player_accounts (
-    id INTEGER PRIMARY KEY, name TEXT NOT NULL, mobile TEXT UNIQUE NOT NULL, pin_hash TEXT NOT NULL, created_at TEXT
+    id INTEGER PRIMARY KEY, name TEXT NOT NULL, mobile TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at TEXT
   );
   CREATE TABLE IF NOT EXISTS venue_settings (
     id INTEGER PRIMARY KEY CHECK(id=1), paddle_stock INTEGER NOT NULL DEFAULT 12,
@@ -67,6 +67,10 @@ db.exec(`
 
 function hasColumn(table: string, column: string): boolean {
   return (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).some(item => item.name === column);
+}
+
+if (hasColumn('player_accounts', 'pin_hash') && !hasColumn('player_accounts', 'password_hash')) {
+  db.exec('ALTER TABLE player_accounts RENAME COLUMN pin_hash TO password_hash');
 }
 
 if (!hasColumn('private_requests', 'player_id')) {
@@ -962,11 +966,13 @@ app.post('/api/staff/venue', requireStaff, (req, res) => {
 app.post('/api/player/register', (req, res) => {
   const name = requiredText(req.body?.name, 'Name', 100);
   const mobile = requireMobile(req.body?.mobile);
-  const pin = typeof req.body?.pin === 'string' ? req.body.pin : '';
-  if (!/^\d{4}$/.test(pin)) throw new ApiError('Enter a 4-digit PIN');
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  if (password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+    throw new ApiError('Password must be at least 8 characters and no more than 72 UTF-8 bytes');
+  }
   try {
-    const created = db.prepare(`INSERT INTO player_accounts(name,mobile,pin_hash,created_at)
-      VALUES (?,?,?,?)`).run(name, mobile, bcrypt.hashSync(pin, 12), new Date().toISOString());
+    const created = db.prepare(`INSERT INTO player_accounts(name,mobile,password_hash,created_at)
+      VALUES (?,?,?,?)`).run(name, mobile, bcrypt.hashSync(password, 12), new Date().toISOString());
     const player = { id: Number(created.lastInsertRowid), name, mobile };
     res.status(201).json({
       token: jwt.sign({ playerId: player.id, role: 'player' }, jwtSecret, { expiresIn: '30d' }),
@@ -982,9 +988,11 @@ app.post('/api/player/register', (req, res) => {
 
 app.post('/api/player/login', (req, res) => {
   const mobile = requireMobile(req.body?.mobile);
-  const pin = typeof req.body?.pin === 'string' ? req.body.pin : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
   const account = db.prepare('SELECT * FROM player_accounts WHERE mobile=?').get(mobile) as any;
-  if (!account || !bcrypt.compareSync(pin, account.pin_hash)) throw new ApiError('Invalid mobile number or PIN', 401);
+  if (!account || !password || Buffer.byteLength(password, 'utf8') > 72 || !bcrypt.compareSync(password, account.password_hash)) {
+    throw new ApiError('Invalid mobile number or password', 401);
+  }
   res.json({
     token: jwt.sign({ playerId: account.id, role: 'player' }, jwtSecret, { expiresIn: '30d' }),
     player: { id: account.id, name: account.name, mobile: account.mobile },

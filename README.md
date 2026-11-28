@@ -7,7 +7,7 @@ A full-stack booking application for private court reservations, Open Play, coac
 - React, TypeScript, and Vite
 - Express API
 - SQLite (`better-sqlite3`) with persistent local storage
-- bcrypt password/PIN hashing and signed, expiring JWTs
+- bcrypt password hashing and signed, expiring JWTs
 
 ## Run locally
 
@@ -63,10 +63,12 @@ For local development only, a new database uses `staff123` when `INITIAL_STAFF_P
 
 This pickleball application has **Player** and **Staff / Admin** roles. Teacher and Student roles are not part of its implemented workflows.
 
+Player accounts now use passwords of at least eight characters. Existing credential hashes are migrated in place, so current players can continue using their existing credential in the Password field.
+
 ## Implemented workflows
 
 - Live availability from SQLite, multi-court/hour selection, database-priced quotes, equipment inventory, atomic booking submission, unique references, and status lookup.
-- Player registration/login and persistent booking/session history.
+- Player password registration/login and persistent booking/session history.
 - Published Open Play and coaching sessions, skill/date filters, capacity checks, duplicate prevention, waitlists, and automatic FIFO promotion after a spot is released.
 - Protected staff login/logout and dashboard operations for booking review, manual bookings, court blocks, session creation/editing/publishing, rosters, check-in, venue details, hours/weekly closures, pricing, equipment settings, and date-based reports.
 - Asia/Manila date calculations and Philippine peso display.
