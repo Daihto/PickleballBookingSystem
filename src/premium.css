@@ -8,7 +8,7 @@
   --line-strong: rgba(24, 62, 47, 0.28);
   --text: #20372d;
   --muted: #5f7065;
-  --muted-2: #7a897f;
+  --muted-2: #5c6e62;
   --accent: #c5ed68;
   --accent-strong: #d7f58d;
   --accent-dark: #163d30;
@@ -521,7 +521,7 @@ select:focus-visible {
 .time-slot.closed,
 .time-slot:disabled {
   background: repeating-linear-gradient(135deg, #f1f3ee, #f1f3ee 6px, #e9ede6 6px, #e9ede6 12px);
-  color: #849087;
+  color: #5c6e62;
   cursor: not-allowed;
 }
 
@@ -587,7 +587,7 @@ select:focus-visible {
 
 .quantity button:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: #386f4f;
 }
 
 .summary {
@@ -722,7 +722,7 @@ select:focus-visible {
 .primary:disabled {
   border-color: #d9dfd7;
   background: #e8ece6;
-  color: #7c887f;
+  color: #56645a;
   cursor: not-allowed;
 }
 
@@ -1369,7 +1369,7 @@ select:focus-visible {
 .row-actions button:hover,
 .inline-actions button:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: #386f4f;
 }
 
 .danger {
