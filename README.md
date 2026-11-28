@@ -17,7 +17,7 @@ The app runs at http://localhost:5173, and the API runs at http://localhost:3001
 On its first run, the local database gets the venue details, four courts, sample sessions, and a development staff account:
 
 - Email: `staff@mactanpickleball.ph`
-- Password: `staff123`
+- Password: Use `INITIAL_STAFF_PASSWORD` if set; otherwise, the local default is `staff123`.
 
 This account is for local development only. Don't use it in production.
 
