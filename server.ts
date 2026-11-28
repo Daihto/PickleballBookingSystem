@@ -507,6 +507,30 @@ function requireStaff(req: Request, res: Response, next: NextFunction): void {
   next();
 }
 
+type PlayerAccount = { id: number; name: string; mobile: string };
+
+function playerFromToken(token: string): PlayerAccount | null {
+  if (!token) return null;
+  let claims: JwtPayload & { playerId?: number; role?: string };
+  try {
+    claims = jwt.verify(token, jwtSecret) as JwtPayload & { playerId?: number; role?: string };
+  } catch {
+    throw new ApiError('Player sign-in required', 401);
+  }
+  if (claims.role !== 'player' || !Number.isSafeInteger(claims.playerId)) {
+    throw new ApiError('Player sign-in required', 401);
+  }
+  const player = db.prepare('SELECT id,name,mobile FROM player_accounts WHERE id=?')
+    .get(claims.playerId) as PlayerAccount | undefined;
+  if (!player) throw new ApiError('Player sign-in required', 401);
+  return player;
+}
+
+function playerFromRequest(req: Request): PlayerAccount | null {
+  const token = typeof req.headers['x-player-token'] === 'string' ? req.headers['x-player-token'] : '';
+  return playerFromToken(token);
+}
+
 function promoteWaitlist(sessionId: number): void {
   const session = db.prepare('SELECT capacity FROM sessions WHERE id=?').get(sessionId) as { capacity: number } | undefined;
   if (!session) return;
@@ -592,8 +616,9 @@ app.post('/api/quote', (req, res) => {
 });
 
 app.post('/api/requests', (req, res) => {
-  const name = requiredText(req.body?.name, 'Name', 100);
-  const mobile = requireMobile(req.body?.mobile);
+  const player = playerFromRequest(req);
+  const name = player?.name ?? requiredText(req.body?.name, 'Name', 100);
+  const mobile = player?.mobile ?? requireMobile(req.body?.mobile);
   const date = requireDate(req.body?.date);
   const selections = parseSelections(req.body?.selections);
   const { paddleStock } = getPaddleSettings();
@@ -605,21 +630,11 @@ app.post('/api/requests', (req, res) => {
       && Number(req.body.expectedGrandTotal) !== quote.grandTotal) {
       throw new ApiError('The quote changed. Review the updated total before submitting.', 409, { updatedQuote: quote });
     }
-    let playerId: number | null = null;
-    const playerToken = String(req.headers['x-player-token'] || '');
-    if (playerToken) {
-      try {
-        const claims = jwt.verify(playerToken, jwtSecret) as JwtPayload & { playerId?: number; role?: string };
-        if (claims.role === 'player' && Number.isSafeInteger(claims.playerId)) playerId = claims.playerId!;
-      } catch {
-        playerId = null;
-      }
-    }
     const reference = uniqueReference();
     const request = db.prepare(`INSERT INTO private_requests
       (reference,player_name,mobile,status,subtotal,add_on_total,grand_total,paddle_qty,created_at,player_id)
       VALUES (?,?,?,'Pending',?,?,?,?,?,?)`)
-      .run(reference, name, mobile, quote.subtotal, quote.paddleTotal, quote.grandTotal, paddleQty, new Date().toISOString(), playerId);
+      .run(reference, name, mobile, quote.subtotal, quote.paddleTotal, quote.grandTotal, paddleQty, new Date().toISOString(), player?.id ?? null);
     const requestId = Number(request.lastInsertRowid);
     const insertSlot = db.prepare(`INSERT INTO private_slots
       (request_id,court_id,date,start_hour,end_hour,rate,status) VALUES (?,?,?,?,?,?,'Pending')`);
@@ -667,8 +682,9 @@ app.get('/api/sessions', (req, res) => {
 
 app.post('/api/sessions/:id/register', (req, res) => {
   const sessionId = integer(req.params.id, 'Session', 1, 1000000);
-  const name = requiredText(req.body?.name, 'Name', 100);
-  const mobile = requireMobile(req.body?.mobile);
+  const player = playerFromRequest(req);
+  const name = player?.name ?? requiredText(req.body?.name, 'Name', 100);
+  const mobile = player?.mobile ?? requireMobile(req.body?.mobile);
   const result = transaction(() => {
     const session = db.prepare('SELECT * FROM sessions WHERE id=? AND published=1').get(sessionId) as any;
     if (!session) throw new ApiError('Session not found', 404);
@@ -976,25 +992,31 @@ app.post('/api/player/login', (req, res) => {
 });
 
 app.get('/api/player/me', (req, res) => {
-  const token = typeof req.headers['x-player-token'] === 'string' ? req.headers['x-player-token'] : '';
-  let claims: JwtPayload & { playerId?: number; role?: string };
-  try {
-    claims = jwt.verify(token, jwtSecret) as JwtPayload & { playerId?: number; role?: string };
-  } catch {
-    throw new ApiError('Player sign-in required', 401);
-  }
-  if (claims.role !== 'player' || !Number.isSafeInteger(claims.playerId)) {
-    throw new ApiError('Player sign-in required', 401);
-  }
-  const player = db.prepare('SELECT id,name,mobile FROM player_accounts WHERE id=?').get(claims.playerId) as any;
+  const player = playerFromRequest(req);
   if (!player) throw new ApiError('Player sign-in required', 401);
   const requests = db.prepare(`SELECT pr.*,(SELECT COUNT(*) FROM private_slots ps WHERE ps.request_id=pr.id) slot_count
     FROM private_requests pr WHERE pr.player_id=? OR pr.mobile=? ORDER BY pr.created_at DESC`)
-    .all(player.id, player.mobile);
+    .all(player.id, player.mobile) as any[];
+  const requestIds = requests.map(request => request.id);
+  const slots = requestIds.length
+    ? db.prepare(`SELECT ps.*,c.name court_name FROM private_slots ps JOIN courts c ON c.id=ps.court_id
+      WHERE ps.request_id IN (${requestIds.map(() => '?').join(',')}) ORDER BY ps.date,ps.start_hour`)
+      .all(...requestIds) as any[]
+    : [];
+  const slotsByRequest = new Map<number, any[]>();
+  for (const slot of slots) {
+    const requestSlots = slotsByRequest.get(slot.request_id) || [];
+    requestSlots.push(slot);
+    slotsByRequest.set(slot.request_id, requestSlots);
+  }
   const sessions = db.prepare(`SELECT r.*,s.title,s.date,s.start_hour,s.end_hour,s.court_id,c.name court_name
     FROM registrations r JOIN sessions s ON s.id=r.session_id JOIN courts c ON c.id=s.court_id
     WHERE r.mobile=? ORDER BY s.date DESC,s.start_hour`).all(player.mobile);
-  res.json({ player, requests, sessions });
+  res.json({
+    player,
+    requests: requests.map(request => ({ ...request, slots: slotsByRequest.get(request.id) || [] })),
+    sessions,
+  });
 });
 
 app.all('/api/*splat', (_req, res) => {

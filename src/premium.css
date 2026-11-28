@@ -6,15 +6,15 @@
   --surface-hover: #f2f6ef;
   --line: rgba(24, 62, 47, 0.15);
   --line-strong: rgba(24, 62, 47, 0.28);
-  --text: #20372d;
-  --muted: #5f7065;
-  --muted-2: #5c6e62;
+  --text: #000;
+  --muted: #000;
+  --muted-2: #000;
   --accent: #c5ed68;
   --accent-strong: #d7f58d;
   --accent-dark: #163d30;
-  --danger: #b54135;
-  --success: #26764e;
-  --warning: #8d5d16;
+  --danger: #000;
+  --success: #000;
+  --warning: #000;
   --shadow: 0 24px 70px rgba(22, 54, 39, 0.12);
 }
 
@@ -82,12 +82,12 @@ select:focus-visible {
   padding: 0 clamp(18px, 4vw, 56px);
   display: flex;
   align-items: center;
-  gap: 28px;
+  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 40;
-  color: #fff;
-  background: rgba(13, 51, 40, 0.96);
+  color: #000;
+  background: rgba(241, 247, 237, 0.96);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
 }
@@ -116,7 +116,7 @@ select:focus-visible {
 
 .brand small {
   margin-top: 2px;
-  color: rgba(255, 255, 255, 0.72);
+  color: #000;
   font-size: 11px;
 }
 
@@ -132,42 +132,13 @@ select:focus-visible {
   height: 34px;
 }
 
-.nav {
-  height: 100%;
-  margin: 0 auto;
-  display: flex;
-  align-items: stretch;
-}
-
-.nav button {
-  min-width: 86px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.72);
-  padding: 0 13px;
-  font-size: 13px;
-  font-weight: 750;
-  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-
-.nav button:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.nav button.active {
-  color: #fff;
-  border-bottom-color: var(--accent);
-}
-
 .staff-button {
   min-width: 68px;
   height: 38px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #fff;
+  color: #000;
   font-size: 13px;
   font-weight: 800;
 }
@@ -175,13 +146,83 @@ select:focus-visible {
 .staff-button:hover {
   border-color: var(--accent);
   background: var(--accent);
-  color: #17382c;
+  color: #000;
+}
+
+.staff-button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #000;
 }
 
 .booking-page {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 38px clamp(18px, 4vw, 48px) 80px;
+  padding: 0 clamp(18px, 4vw, 48px) 80px;
+}
+
+.booking-page .page-intro {
+  width: 100vw;
+  min-height: 190px;
+  margin-left: calc(50% - 50vw);
+  margin-bottom: 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  padding: 38px clamp(20px, calc((100vw - 1320px) / 2), 120px) 48px;
+  box-shadow: none;
+}
+
+.booking-page .page-intro small {
+  display: block;
+  margin-top: 8px;
+  color: #000;
+  font-size: 11px;
+}
+
+.player-nav {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 8px;
+  margin: -18px 0 18px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.player-nav nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.player-nav button {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.player-nav button.active {
+  background: #dcebd4;
+  color: #000;
+}
+
+.player-nav .player-nav-status {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: #000;
+}
+
+.player-nav .player-nav-status:hover {
+  border-color: #3c734d;
+  background: var(--surface-hover);
 }
 
 .page-intro {
@@ -196,8 +237,8 @@ select:focus-visible {
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(12, 49, 38, 0.98) 0%, rgba(15, 58, 44, 0.87) 48%, rgba(20, 75, 55, 0.35) 100%),
-    linear-gradient(135deg, #103a2d 0%, #1c5942 65%, #164432 100%);
+    linear-gradient(90deg, rgba(236, 244, 230, 0.98) 0%, rgba(230, 241, 224, 0.92) 48%, rgba(223, 237, 216, 0.82) 100%),
+    linear-gradient(135deg, #edf4e9 0%, #e1efdc 65%, #d7e9d1 100%);
   box-shadow: var(--shadow);
 }
 
@@ -239,13 +280,13 @@ select:focus-visible {
   letter-spacing: 0.16em;
   font-size: 10px;
   font-weight: 850;
-  color: var(--accent);
+  color: #000;
 }
 
 .page-intro h1 {
   max-width: 680px;
   margin: 10px 0 12px;
-  color: #fff;
+  color: #000;
   font-size: clamp(38px, 5vw, 62px);
   line-height: 0.98;
   letter-spacing: -0.055em;
@@ -255,7 +296,7 @@ select:focus-visible {
 .page-intro p {
   max-width: 610px;
   margin: 0;
-  color: #d5e4dc;
+  color: #000;
   line-height: 1.55;
 }
 
@@ -265,8 +306,8 @@ select:focus-visible {
   border: 1px solid var(--line);
   border-radius: 7px;
   padding: 9px 11px;
-  background: rgba(9, 43, 32, 0.65);
-  color: #e5eee8;
+  background: #e8f0e5;
+  color: #000;
   font-size: 11px;
   white-space: nowrap;
 }
@@ -281,15 +322,61 @@ select:focus-visible {
   box-shadow: 0 0 14px rgba(197, 237, 104, 0.55);
 }
 
-.booking-grid {
+.booking-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 342px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+  align-items: start;
+  gap: 14px;
 }
 
-.booking-flow {
+.booking-setup {
+  grid-column: 1 / -1;
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.5fr);
+  gap: 14px;
+}
+
+.booking-layout > * {
+  min-width: 0;
+}
+
+.schedule-panel {
+  grid-column: 1;
+  grid-row: 2;
+  overflow: hidden;
+  padding: 0;
+}
+
+.schedule-heading {
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.schedule-heading > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #000;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.schedule-heading h2 {
+  margin: 0 0 5px;
+}
+
+.schedule-heading p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.schedule-panel .legend {
+  margin: 14px 18px;
+}
+
+.schedule-panel .slot-grid {
+  padding: 0 18px 18px;
 }
 
 .panel,
@@ -311,11 +398,39 @@ select:focus-visible {
   padding: 18px;
 }
 
-.date-panel,
+.date-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
 .equipment-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.date-control {
+  min-width: 0;
+}
+
+.date-rate-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  padding: 9px;
+}
+
+.date-rate-note span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.date-rate-note b {
+  color: #000;
+  font-size: 11px;
 }
 
 .step-label {
@@ -327,12 +442,12 @@ select:focus-visible {
 .step-label > span {
   width: 32px;
   height: 32px;
-  border: 1px solid #103a2d;
+  border: 1px solid #c5ed68;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #103a2d;
-  color: #fff;
+  background: #c5ed68;
+  color: #000;
   font-size: 11px;
   font-weight: 850;
 }
@@ -417,15 +532,15 @@ select:focus-visible {
 }
 
 .court-switcher {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin: 16px 0 18px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  margin: 16px 0 0;
 }
 
 .court-switcher button {
-  min-width: 152px;
+  min-width: 0;
+  min-height: 58px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -447,17 +562,17 @@ select:focus-visible {
 .court-switcher button.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #11150f;
+  color: #000;
 }
 
 .court-switcher button.active small {
-  color: #3c482f;
+  color: #000;
 }
 
 .slot-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
 }
 
 .time-group h3 {
@@ -509,11 +624,11 @@ select:focus-visible {
 .time-slot.selected {
   background: var(--accent);
   border-color: var(--accent);
-  color: #11150f;
+  color: #000;
 }
 
 .time-slot.selected span {
-  color: #3f4b31;
+  color: #000;
 }
 
 .time-slot.occupied,
@@ -521,7 +636,7 @@ select:focus-visible {
 .time-slot.closed,
 .time-slot:disabled {
   background: repeating-linear-gradient(135deg, #f1f3ee, #f1f3ee 6px, #e9ede6 6px, #e9ede6 12px);
-  color: #5c6e62;
+  color: #000;
   cursor: not-allowed;
 }
 
@@ -587,14 +702,49 @@ select:focus-visible {
 
 .quantity button:hover {
   border-color: var(--accent);
-  color: #386f4f;
+  color: #000;
 }
 
 .summary {
+  grid-column: 2;
+  grid-row: 2;
   position: sticky;
   top: 94px;
   align-self: start;
   overflow: hidden;
+}
+
+.summary-equipment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 12px 16px;
+}
+
+.summary-equipment > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summary-equipment b {
+  font-size: 12px;
+}
+
+.summary-equipment small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.summary-equipment .quantity {
+  gap: 8px;
+}
+
+.summary-equipment .quantity button {
+  width: 30px;
+  height: 30px;
 }
 
 .summary-head {
@@ -707,7 +857,7 @@ select:focus-visible {
   border: 1px solid var(--accent);
   border-radius: 7px;
   background: var(--accent);
-  color: #11150f;
+  color: #000;
   padding: 0 15px;
   font-weight: 850;
   transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
@@ -722,7 +872,7 @@ select:focus-visible {
 .primary:disabled {
   border-color: #d9dfd7;
   background: #e8ece6;
-  color: #56645a;
+  color: #000;
   cursor: not-allowed;
 }
 
@@ -734,6 +884,35 @@ select:focus-visible {
 .review-form {
   border-top: 1px solid var(--line);
   padding-top: 12px;
+}
+
+.booking-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-hover);
+  padding: 12px;
+  color: var(--text);
+}
+
+.review-form .booking-identity {
+  margin: 0 16px 12px;
+}
+
+.modal .booking-identity {
+  margin-bottom: 12px;
+}
+
+.booking-identity span,
+.booking-identity small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.booking-identity b {
+  font-size: 14px;
 }
 
 .review-form label {
@@ -812,7 +991,7 @@ select:focus-visible {
   border: 1px solid rgba(181, 65, 53, 0.28);
   border-radius: 7px;
   background: rgba(181, 65, 53, 0.07);
-  color: #a33b30;
+  color: #000;
   padding: 9px;
   font-size: 12px;
 }
@@ -895,7 +1074,7 @@ select:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   background: var(--accent);
-  color: #17382c;
+  color: #000;
   border-radius: 5px;
   padding: 5px 7px;
 }
@@ -907,7 +1086,7 @@ select:focus-visible {
 .session-body small {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #527b2b;
+  color: #000;
   font-size: 9px;
 }
 
@@ -944,6 +1123,44 @@ select:focus-visible {
   max-width: 620px;
   margin: 0 auto;
   padding: 38px 24px;
+}
+
+.narrow-page.account-page {
+  max-width: 1120px;
+}
+
+.account-page .staff-columns {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr);
+}
+
+.account-panel {
+  min-width: 0;
+}
+
+.account-record {
+  align-items: center;
+  gap: 16px;
+}
+
+.account-record > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-record small {
+  margin-top: 4px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.account-record-meta {
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 7px;
+}
+
+.account-record-meta > b {
+  font-size: 12px;
 }
 
 .narrow-page .page-intro {
@@ -997,25 +1214,25 @@ select:focus-visible {
 
 .status.pending {
   background: rgba(228, 177, 80, 0.18);
-  color: var(--warning);
+  color: #000;
 }
 
 .status.confirmed,
 .status.checked-in {
   background: rgba(78, 151, 99, 0.13);
-  color: var(--success);
+  color: #000;
 }
 
 .status.waitlisted {
   background: rgba(113, 145, 126, 0.14);
-  color: #456b55;
+  color: #000;
 }
 
 .status.declined,
 .status.cancelled,
 .status.released {
   background: rgba(181, 65, 53, 0.1);
-  color: var(--danger);
+  color: #000;
 }
 
 .success-page {
@@ -1040,7 +1257,7 @@ select:focus-visible {
   display: grid;
   place-items: center;
   background: var(--accent);
-  color: #11150f;
+  color: #000;
   font-size: 11px;
   font-weight: 850;
   text-transform: uppercase;
@@ -1114,79 +1331,89 @@ select:focus-visible {
 }
 
 .staff-page {
-  display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
+  display: block;
   min-height: calc(100vh - 76px);
 }
 
 .staff-sidebar {
-  background: #103a2d;
-  color: #fff;
-  padding: 18px 12px;
-  border-right: 1px solid var(--line);
-}
-
-.staff-venue {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 8px 24px;
-}
-
-.staff-venue div {
-  display: flex;
-  flex-direction: column;
-}
-
-.staff-venue small {
-  color: var(--muted);
+  gap: 16px;
+  margin: -18px 0 18px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 
 .staff-sidebar nav {
-  display: grid;
+  display: flex;
   gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  margin-right: auto;
 }
 
 .staff-sidebar nav button {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
-  text-align: left;
-  padding: 10px 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  padding: 10px 14px;
 }
 
 .staff-sidebar nav button.active {
-  background: var(--accent);
-  color: #17382c;
+  background: #dcebd4;
+  color: #000;
 }
 
 .staff-signout {
-  position: absolute;
-  bottom: 18px;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .staff-content {
-  padding: 28px 34px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px clamp(18px, 4vw, 48px);
 }
 
 .staff-header {
+  width: 100vw;
+  margin: -24px calc(50% - 50vw) 18px;
+  padding: 30px clamp(20px, calc((100vw - 1320px) / 2), 120px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  gap: 20px;
+  color: #000;
+  background:
+    linear-gradient(90deg, rgba(236, 244, 230, 0.98) 0%, rgba(230, 241, 224, 0.92) 48%, rgba(223, 237, 216, 0.82) 100%),
+    #edf4e9;
 }
 
 .staff-header h1 {
   margin: 5px 0 0;
-  color: var(--text);
+  color: #000;
+}
+
+.staff-header p {
+  margin-top: 6px;
+  color: #000;
+  font-size: 13px;
 }
 
 .staff-date {
   width: 210px;
+}
+
+.staff-date span {
+  color: #000;
 }
 
 .metrics {
@@ -1369,11 +1596,11 @@ select:focus-visible {
 .row-actions button:hover,
 .inline-actions button:hover {
   border-color: var(--accent);
-  color: #386f4f;
+  color: #000;
 }
 
 .danger {
-  color: var(--danger);
+  color: #000;
 }
 
 .staff-form-grid {
@@ -1407,7 +1634,7 @@ select:focus-visible {
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 44%, rgba(197, 237, 104, 0.16), transparent 18rem),
-    #103a2d;
+    #f3f7ef;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1421,7 +1648,7 @@ select:focus-visible {
   position: absolute;
   width: 2px;
   height: 180%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(22, 54, 39, 0.08);
   transform: rotate(34deg);
   animation: starterSweep 1.1s ease-out both;
 }
@@ -1438,7 +1665,7 @@ select:focus-visible {
 .starter-court {
   width: 150px;
   height: 82px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(22, 54, 39, 0.2);
   position: absolute;
   opacity: 0.7;
 }
@@ -1447,7 +1674,7 @@ select:focus-visible {
 .starter-court::after {
   content: "";
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(22, 54, 39, 0.2);
 }
 
 .starter-court::before {
@@ -1496,7 +1723,7 @@ select:focus-visible {
 
 .starter-brand span {
   margin-bottom: 7px;
-  color: var(--accent);
+  color: #000;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.26em;
@@ -1558,7 +1785,7 @@ select:focus-visible {
 }
 
 .entry-brand b {
-  color: #164231;
+  color: #000;
   font-size: clamp(40px, 6vw, 72px);
   line-height: 0.86;
   letter-spacing: -0.06em;
@@ -1592,7 +1819,7 @@ select:focus-visible {
 
 .entry-card .kicker,
 .success-card .kicker {
-  color: #4b742e;
+  color: #000;
 }
 
 .entry-copy {
@@ -1641,7 +1868,7 @@ select:focus-visible {
 }
 
 .role-switch button.active span {
-  color: #3f6924;
+  color: #000;
 }
 
 .account-mode {
@@ -1790,33 +2017,24 @@ select:focus-visible {
     display: none;
   }
 
-  .nav {
-    order: 3;
-    width: 100%;
-    height: 48px;
-    overflow-x: auto;
-  }
-
-  .nav button {
-    min-width: 92px;
-    white-space: nowrap;
-    padding: 0 10px;
-  }
-
   .staff-button {
     margin-left: auto;
   }
 
-  .booking-page {
-    padding: 20px 14px 60px;
+  .player-nav {
+    grid-template-columns: minmax(0, 1fr) 190px;
   }
 
-  .page-intro {
+  .booking-page {
+    padding: 0 14px 60px;
+  }
+
+  .booking-page .page-intro {
     min-height: 170px;
     padding: 26px 22px;
   }
 
-  .page-intro h1 {
+  .booking-page .page-intro h1 {
     font-size: clamp(34px, 9vw, 48px);
   }
 
@@ -1824,15 +2042,26 @@ select:focus-visible {
     display: none;
   }
 
-  .booking-grid,
+  .booking-layout,
+  .booking-setup,
   .slot-grid,
   .session-grid,
   .staff-columns {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .booking-grid > *,
-  .booking-flow,
+  .court-switcher {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .schedule-panel,
+  .summary {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .booking-layout > *,
+  .booking-setup > *,
   .panel,
   .summary {
     min-width: 0;
@@ -1848,7 +2077,6 @@ select:focus-visible {
 
   .staff-page {
     min-width: 0;
-    grid-template-columns: 1fr;
   }
 
   .staff-sidebar {
@@ -1862,10 +2090,6 @@ select:focus-visible {
     align-items: center;
     padding: 8px;
     overflow: hidden;
-  }
-
-  .staff-venue {
-    display: none;
   }
 
   .staff-sidebar nav {
@@ -1920,8 +2144,12 @@ select:focus-visible {
     height: 31px;
   }
 
-  .booking-grid {
+  .booking-layout {
     gap: 12px;
+  }
+
+  .player-nav {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .date-panel {
@@ -1961,6 +2189,14 @@ select:focus-visible {
 
   .narrow-page {
     padding: 20px 14px;
+  }
+
+  .account-record {
+    align-items: flex-start;
+  }
+
+  .account-record-meta {
+    align-items: flex-end;
   }
 
   .staff-header {

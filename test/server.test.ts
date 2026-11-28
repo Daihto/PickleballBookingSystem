@@ -112,6 +112,13 @@ test('player booking persists, is shared with staff, snapshots pricing, and rele
   });
   assert.equal(account.status, 201);
   const playerToken = (account.body as any).token as string;
+  assert.equal((await call('/api/requests', {
+    body: {
+      name: 'Test Player', mobile, date,
+      selections: [{ courtId: 1, start: 5 }],
+    },
+    playerToken: 'invalid-token',
+  })).status, 401);
 
   const quote = await call('/api/quote', {
     body: { date, selections: [{ courtId: 1, start: 5 }, { courtId: 2, start: 5 }], paddleQty: 1 },
@@ -119,7 +126,7 @@ test('player booking persists, is shared with staff, snapshots pricing, and rele
   assert.equal(quote.status, 200);
   const submitted = await call('/api/requests', {
     body: {
-      name: 'Test Player', mobile, date,
+      date,
       selections: [{ courtId: 1, start: 5 }, { courtId: 2, start: 5 }],
       paddleQty: 1, expectedGrandTotal: (quote.body as any).grandTotal,
     },
@@ -128,6 +135,13 @@ test('player booking persists, is shared with staff, snapshots pricing, and rele
   assert.equal(submitted.status, 201);
   assert.equal((submitted.body as any).status, 'Pending');
   bookings.push({ reference: (submitted.body as any).reference, mobile });
+
+  const playerPage = await call('/api/player/me', { playerToken });
+  assert.equal(playerPage.status, 200);
+  assert.equal((playerPage.body as any).requests[0].player_name, 'Test Player');
+  assert.equal((playerPage.body as any).requests[0].mobile, mobile);
+  assert.equal((playerPage.body as any).requests[0].slots.length, 2);
+  assert.ok((playerPage.body as any).requests[0].slots.every((slot: any) => slot.court_name && slot.date === date));
 
   const lookup = await call('/api/lookup', { body: { reference: bookings.at(-1)!.reference, mobile } });
   assert.equal(lookup.status, 200);
@@ -163,9 +177,8 @@ test('player booking persists, is shared with staff, snapshots pricing, and rele
   })).status, 200);
   const available = await call(`/api/availability?date=${date}`);
   assert.equal((available.body as any).slots.find((item: any) => item.id === 1).slots.find((slot: any) => slot.start === 5).status, 'available');
-  const playerPage = await call('/api/player/me', { playerToken });
-  assert.equal(playerPage.status, 200);
-  assert.equal((playerPage.body as any).requests[0].status, 'Cancelled');
+  const updatedPlayerPage = await call('/api/player/me', { playerToken });
+  assert.equal((updatedPlayerPage.body as any).requests[0].status, 'Cancelled');
 
   await stopServer(server);
   server = undefined;
@@ -358,8 +371,13 @@ test('equipment stock and session capacity, waitlist promotion, and court confli
     body: { name: 'Overlap', mobile: '09170000027', date: sessionDate, selections: [{ courtId: 1, start: 8 }] },
   })).status, 409);
 
+  const firstAccount = await call('/api/player/register', {
+    body: { name: 'First Player', mobile: '09170000028', pin: '1234' },
+  });
+  const firstPlayerToken = (firstAccount.body as any).token as string;
   const first = await call(`/api/sessions/${sessionId}/register`, {
-    body: { name: 'First Player', mobile: '09170000028' },
+    body: { name: 'Wrong Name', mobile: '09170000001' },
+    playerToken: firstPlayerToken,
   });
   const second = await call(`/api/sessions/${sessionId}/register`, {
     body: { name: 'Waitlisted Player', mobile: '09170000029' },
@@ -367,6 +385,9 @@ test('equipment stock and session capacity, waitlist promotion, and court confli
   assert.equal(first.status, 201);
   assert.equal((first.body as any).status, 'Pending');
   assert.equal((second.body as any).status, 'Waitlisted');
+  const firstPlayerPage = await call('/api/player/me', { playerToken: firstPlayerToken });
+  assert.equal((firstPlayerPage.body as any).sessions[0].player_name, 'First Player');
+  assert.equal((firstPlayerPage.body as any).sessions[0].mobile, '09170000028');
   assert.equal((await call(`/api/sessions/${sessionId}/register`, {
     body: { name: 'Duplicate Player', mobile: '09170000029' },
   })).status, 409);
@@ -386,7 +407,8 @@ test('equipment stock and session capacity, waitlist promotion, and court confli
     token: staffToken, body: { status: 'Released' },
   })).status, 200);
   const rejoined = await call(`/api/sessions/${sessionId}/register`, {
-    body: { name: 'First Player', mobile: '09170000028' },
+    body: {},
+    playerToken: firstPlayerToken,
   });
   assert.equal(rejoined.status, 201);
   assert.equal((rejoined.body as any).status, 'Pending');

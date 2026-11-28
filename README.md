@@ -55,6 +55,14 @@ INITIAL_STAFF_PASSWORD=<a strong initial password for a new database>
 
 `INITIAL_STAFF_PASSWORD` is only used when a database has no staff account. The development fallback password and JWT secret are not used in production. Keep `.env` and database files private, and do not use temporary storage if bookings must survive a redeploy.
 
+## Administrator sign-in
+
+On the login page, choose **Staff / Admin** and sign in with `staff@mactanpickleball.ph`. For a new database, the password is the value of `INITIAL_STAFF_PASSWORD`; set it privately in Render's service environment before the first start. The application does not display or return that password.
+
+For local development only, a new database uses `staff123` when `INITIAL_STAFF_PASSWORD` is unset. Do not use this fallback in production. Changing `INITIAL_STAFF_PASSWORD` after a staff account already exists does not reset that account's password.
+
+This pickleball application has **Player** and **Staff / Admin** roles. Teacher and Student roles are not part of its implemented workflows.
+
 ## Implemented workflows
 
 - Live availability from SQLite, multi-court/hour selection, database-priced quotes, equipment inventory, atomic booking submission, unique references, and status lookup.
