@@ -62,6 +62,18 @@ button {
   cursor: pointer;
 }
 
+button:not(:disabled) {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
@@ -75,6 +87,10 @@ select:focus-visible {
     linear-gradient(rgba(24, 62, 47, 0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(24, 62, 47, 0.025) 1px, transparent 1px);
   background-size: 72px 72px;
+}
+
+.app main > * {
+  animation: pageReveal 420ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 .topbar {
@@ -1286,13 +1302,14 @@ select:focus-visible {
   place-items: center;
   padding: 16px;
   backdrop-filter: blur(8px);
+  animation: fadeIn 180ms ease-out both;
 }
 
 .modal {
   width: min(430px, 100%);
   padding: 24px;
   position: relative;
-  animation: rise 220ms ease-out;
+  animation: modalReveal 260ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 .modal h2 {
@@ -1471,6 +1488,187 @@ select:focus-visible {
 .staff-panel header b {
   color: var(--muted);
   font-size: 11px;
+}
+
+.settings-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-layout > .form-error {
+  margin: 0;
+}
+
+.settings-panel {
+  min-width: 0;
+}
+
+.settings-form-grid,
+.settings-equipment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-form-grid {
+  padding: 16px;
+}
+
+.settings-equipment {
+  align-items: end;
+  padding: 0 16px 16px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.settings-actions button {
+  height: 42px;
+  min-width: 170px;
+  border-radius: 7px;
+}
+
+.settings-actions button:not(.primary) {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+  padding: 0 14px;
+}
+
+.settings-court-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 14px;
+}
+
+.court-editor {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-hover);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.court-editor:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: 0 12px 26px rgba(22, 54, 39, 0.1);
+}
+
+.court-editor-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.court-editor-heading span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.court-editor-heading b {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.court-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.court-fields label {
+  min-width: 0;
+}
+
+.court-fields .court-field-name {
+  grid-column: 1 / -1;
+}
+
+.court-fields input,
+.court-fields select {
+  width: 100%;
+  min-width: 0;
+}
+
+.closed-days {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.closed-days legend {
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.weekday-options {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.staff-panel .weekday-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.staff-panel .weekday-option.selected {
+  border-color: rgba(22, 61, 48, 0.35);
+  background: rgba(197, 237, 104, 0.2);
+}
+
+.staff-panel .weekday-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  flex: 0 0 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent-dark);
+  cursor: pointer;
+}
+
+.staff-panel .weekday-option span {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.court-save {
+  width: 100%;
 }
 
 .review-row small,
@@ -1893,6 +2091,7 @@ select:focus-visible {
     radial-gradient(circle at 75% 35%, rgba(197,237,104,.14), transparent 24rem),
     var(--ink);
   background-size: 72px 72px, 72px 72px, auto, auto;
+  animation: pageReveal 600ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
 }
 
 .entry-brand {
@@ -1936,6 +2135,19 @@ select:focus-visible {
   box-shadow: var(--shadow);
   padding: clamp(22px, 4vw, 38px);
   animation: entryRise 700ms 180ms ease-out both;
+}
+
+.entry-card,
+.session-card,
+.metrics article {
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.entry-card:hover,
+.session-card:hover,
+.metrics article:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 46px rgba(22, 54, 39, 0.16);
 }
 
 .entry-card h1 {
@@ -2101,6 +2313,26 @@ select:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pageReveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes scrollReveal {
+  from { opacity: 0; transform: translateY(18px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalReveal {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (max-width: 900px) {
   .entry-page {
     grid-template-columns: 1fr;
@@ -2263,6 +2495,12 @@ select:focus-visible {
   }
 }
 
+@media (max-width: 760px) {
+  .settings-court-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 540px) {
   .brand b {
     max-width: 150px;
@@ -2340,6 +2578,33 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .settings-form-grid,
+  .settings-equipment,
+  .court-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .court-fields .court-field-name {
+    grid-column: auto;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions button {
+    width: 100%;
+  }
+
+  .weekday-options {
+    gap: 4px;
+  }
+
+  .staff-panel .weekday-option {
+    gap: 3px;
+    padding: 4px 2px;
+  }
+
   .name-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2354,6 +2619,25 @@ select:focus-visible {
 
   .table-wrap table {
     min-width: 650px;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .app main :is(
+    .page-intro,
+    .player-nav,
+    .booking-layout,
+    .session-controls,
+    .session-grid,
+    .staff-columns > .staff-panel,
+    .metrics,
+    .calendar-panel,
+    .overview-reviews,
+    .settings-panel
+  ) {
+    animation: scrollReveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
   }
 }
 

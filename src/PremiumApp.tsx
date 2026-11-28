@@ -394,17 +394,54 @@ function Courts({action}:{action:(p:string,b:any)=>Promise<boolean>}){
  useEffect(()=>{load()},[])
  const updateCourt=(id:number,key:string,value:any)=>setCourts(courts.map(c=>c.id===id?{...c,[key]:value}:c))
  const saveCourt=async(c:any)=>{const days=String(c.closed_days||'').split(',').filter(Boolean).map(Number);if(await action('/api/staff/courts/'+c.id+'/settings',{name:c.name,mode:c.mode,openHour:c.open_hour,closeHour:c.close_hour,weekdayRate:c.weekday_rate,weekendRate:c.weekend_rate,closedDays:days}))load()}
- return <div className="staff-columns">
+ return <div className="settings-layout">
   {error&&<div className="form-error" role="alert">{error}</div>}
-  <section className="staff-panel"><header><span>Venue</span><b>Business details</b></header>{venue&&<div className="form-grid"><label><span>Venue name</span><input value={venue.name} onChange={e=>setVenue({...venue,name:e.target.value})}/></label><label><span>Address</span><input value={venue.address} onChange={e=>setVenue({...venue,address:e.target.value})}/></label><label><span>Phone</span><input value={venue.phone} onChange={e=>setVenue({...venue,phone:e.target.value})}/></label><label><span>Email</span><input type="email" value={venue.email} onChange={e=>setVenue({...venue,email:e.target.value})}/></label></div>}<button className="primary" disabled={!venue} onClick={()=>action('/api/staff/venue',venue)}>Save venue</button>
-   <div className="form-grid"><label><span>Paddle pairs in stock</span><input type="number" min="0" value={equipment.paddleStock} onChange={e=>setEquipment({...equipment,paddleStock:Number(e.target.value)})}/></label><label><span>Rental price per pair</span><input type="number" min="0" value={equipment.paddlePrice} onChange={e=>setEquipment({...equipment,paddlePrice:Number(e.target.value)})}/></label></div><button onClick={()=>action('/api/staff/equipment',equipment).then(ok=>{if(ok)load()})}>Save equipment inventory</button>
+  <section className="staff-panel settings-panel">
+   <header><span>Venue</span><b>Business details</b></header>
+   {venue&&<div className="settings-form-grid">
+    <label><span>Venue name</span><input value={venue.name} onChange={e=>setVenue({...venue,name:e.target.value})}/></label>
+    <label><span>Address</span><input value={venue.address} onChange={e=>setVenue({...venue,address:e.target.value})}/></label>
+    <label><span>Phone</span><input value={venue.phone} onChange={e=>setVenue({...venue,phone:e.target.value})}/></label>
+    <label><span>Email</span><input type="email" value={venue.email} onChange={e=>setVenue({...venue,email:e.target.value})}/></label>
+   </div>}
+   <div className="settings-equipment">
+    <label><span>Paddle pairs in stock</span><input type="number" min="0" value={equipment.paddleStock} onChange={e=>setEquipment({...equipment,paddleStock:Number(e.target.value)})}/></label>
+    <label><span>Rental price per pair</span><input type="number" min="0" value={equipment.paddlePrice} onChange={e=>setEquipment({...equipment,paddlePrice:Number(e.target.value)})}/></label>
+   </div>
+   <div className="settings-actions">
+    <button className="primary" disabled={!venue} onClick={()=>action('/api/staff/venue',venue)}>Save venue</button>
+    <button onClick={()=>action('/api/staff/equipment',equipment).then(ok=>{if(ok)load()})}>Save equipment inventory</button>
+   </div>
   </section>
-  <section className="staff-panel"><header><span>Courts & pricing</span><b>{courts.length} courts</b></header>{courts.map(c=><div className="court-editor" key={c.id}><b>{c.name}</b>
-   <label>Name<input value={c.name} onChange={e=>updateCourt(c.id,'name',e.target.value)}/></label><label>Mode<select value={c.mode} onChange={e=>updateCourt(c.id,'mode',e.target.value)}><option value="24h">24-hour</option><option value="custom">Custom hours</option><option value="closed">Closed</option></select></label>
-   <label>Open hour<input type="number" min="0" max="23" value={c.open_hour} onChange={e=>updateCourt(c.id,'open_hour',Number(e.target.value))}/></label><label>Close hour<input type="number" min="1" max="24" value={c.close_hour} onChange={e=>updateCourt(c.id,'close_hour',Number(e.target.value))}/></label>
-   <label>Weekday rate<input type="number" min="0" value={c.weekday_rate} onChange={e=>updateCourt(c.id,'weekday_rate',Number(e.target.value))}/></label><label>Weekend rate<input type="number" min="0" value={c.weekend_rate} onChange={e=>updateCourt(c.id,'weekend_rate',Number(e.target.value))}/></label>
-   <div className="form-grid"><b>Closed every:</b>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,index)=>{const selected=String(c.closed_days||'').split(',').filter(Boolean).map(Number).includes(index);return <label key={day}><input type="checkbox" checked={selected} onChange={e=>{const days=String(c.closed_days||'').split(',').filter(Boolean).map(Number);const updated=e.target.checked?[...new Set([...days,index])]:days.filter(x=>x!==index);updateCourt(c.id,'closed_days',updated.join(','))}}/>{day}</label>})}</div>
-   <button className="primary" onClick={()=>saveCourt(c)}>Save court settings</button></div>)}</section>
+  <section className="staff-panel settings-panel settings-courts">
+   <header><span>Courts & pricing</span><b>{courts.length} courts</b></header>
+   <div className="settings-court-list">{courts.map(c=><article className="court-editor" key={c.id}>
+    <div className="court-editor-heading"><span>Court {c.id}</span><b>{c.name}</b></div>
+    <div className="court-fields">
+     <label className="court-field-name"><span>Name</span><input value={c.name} onChange={e=>updateCourt(c.id,'name',e.target.value)}/></label>
+     <label><span>Mode</span><select value={c.mode} onChange={e=>updateCourt(c.id,'mode',e.target.value)}><option value="24h">24-hour</option><option value="custom">Custom hours</option><option value="closed">Closed</option></select></label>
+     <label><span>Open hour</span><input type="number" min="0" max="23" value={c.open_hour} onChange={e=>updateCourt(c.id,'open_hour',Number(e.target.value))}/></label>
+     <label><span>Close hour</span><input type="number" min="1" max="24" value={c.close_hour} onChange={e=>updateCourt(c.id,'close_hour',Number(e.target.value))}/></label>
+     <label><span>Weekday rate</span><input type="number" min="0" value={c.weekday_rate} onChange={e=>updateCourt(c.id,'weekday_rate',Number(e.target.value))}/></label>
+     <label><span>Weekend rate</span><input type="number" min="0" value={c.weekend_rate} onChange={e=>updateCourt(c.id,'weekend_rate',Number(e.target.value))}/></label>
+    </div>
+    <fieldset className="closed-days">
+     <legend>Closed every</legend>
+     <div className="weekday-options">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,index)=>{
+      const selected=String(c.closed_days||'').split(',').filter(Boolean).map(Number).includes(index)
+      return <label className={`weekday-option${selected?' selected':''}`} key={day}>
+       <input type="checkbox" checked={selected} onChange={e=>{
+        const days=String(c.closed_days||'').split(',').filter(Boolean).map(Number)
+        const updated=e.target.checked?[...new Set([...days,index])]:days.filter(x=>x!==index)
+        updateCourt(c.id,'closed_days',updated.join(','))
+       }}/>
+       <span>{day}</span>
+      </label>
+     })}</div>
+    </fieldset>
+    <button className="primary court-save" onClick={()=>saveCourt(c)}>Save court settings</button>
+   </article>)}</div>
+  </section>
  </div>
 }
 
