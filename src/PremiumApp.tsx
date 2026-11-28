@@ -36,17 +36,17 @@ function BallMark({small=false}:{small?:boolean}){
 function Starter(){return <div className="starter" role="status" aria-live="polite"><div className="starter-court"><span/><span/><span/></div><div className="starter-ball"><BallMark/></div><div className="starter-brand"><span>Mactan</span><strong>Pickleball Club</strong></div><div className="starter-progress"><i/></div></div>}
 
 export default function PremiumApp(){
- const [view,setView]=useState<View>('book'); const [starting,setStarting]=useState(true); const [entered,setEntered]=useState(sessionStorage.getItem('mactanEntered')==='true'); const [venue,setVenue]=useState<any>(null);const [bootstrapError,setBootstrapError]=useState('')
+ const [view,setView]=useState<View>('book'); const [starting,setStarting]=useState(true); const [entered,setEntered]=useState(Boolean(localStorage.getItem('playerToken')||localStorage.getItem('staffToken'))); const [venue,setVenue]=useState<any>(null);const [bootstrapError,setBootstrapError]=useState('')
  useEffect(()=>{api('/api/bootstrap').then(data=>setVenue(data)).catch((e:any)=>setBootstrapError(e.message));const timer=window.setTimeout(()=>setStarting(false),2600);return()=>window.clearTimeout(timer)},[])
  if(starting)return <Starter/>
- if(!entered)return <EntryView onEnter={(nextView)=>{sessionStorage.setItem('mactanEntered','true');setEntered(true);if(nextView)setView(nextView)}}/>
+ if(!entered)return <EntryView onEnter={(nextView)=>{setEntered(true);setView(nextView)}}/>
  return <div className="app"><header className="topbar"><button className="brand" onClick={()=>setView('book')}><BallMark small/><span><b>{venue?.venue?.name||'Mactan Pickleball Club'}</b><small>Mactan · Cebu</small></span></button><nav className="nav" aria-label="Main navigation"><button className={view==='book'?'active':''} onClick={()=>setView('book')}>Book a court</button><button className={view==='open'?'active':''} onClick={()=>setView('open')}>Open Play</button><button className={view==='coaching'?'active':''} onClick={()=>setView('coaching')}>Coaching</button><button className={view==='lookup'?'active':''} onClick={()=>setView('lookup')}>My booking</button><button className={view==='account'?'active':''} onClick={()=>setView('account')}>Player account</button></nav><button className="staff-button" onClick={()=>setView('staff')}>Staff</button></header>
   {bootstrapError&&<div className="form-error" role="alert">Venue data could not be loaded: {bootstrapError}</div>}
   <main>{view==='book'?<BookingView/>:view==='open'?<SessionsView type="Open Play"/>:view==='coaching'?<SessionsView type="Coaching"/>:view==='lookup'?<LookupView/>:view==='account'?<PlayerAccountView/>:<StaffView/>}</main>
  </div>
 }
 
-function EntryView({onEnter}:{onEnter:(view?:View)=>void}){
+function EntryView({onEnter}:{onEnter:(view:'staff'|'account')=>void}){
  const [role,setRole]=useState<'player'|'staff'>('player')
  const [mode,setMode]=useState<'login'|'register'>('login')
  const [nameParts,setNameParts]=useState<NameParts>(emptyName)
@@ -91,7 +91,6 @@ function EntryView({onEnter}:{onEnter:(view?:View)=>void}){
    </>}
    {error&&<div className="form-error">{error}</div>}
    <button className="primary entry-submit" disabled={role==='player'?!isValidMobile(mobile)||pin.length!==4||(mode==='register'&&!isNameComplete(nameParts)):!email||!password} onClick={submit}>{role==='staff'?'Open staff console':mode==='login'?'Sign in':'Create player account'}</button>
-   <button className="entry-guest" onClick={()=>onEnter()}>Continue as guest</button>
   </div>
  </section>
 }
