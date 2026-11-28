@@ -225,7 +225,105 @@ function StaffView({onSignOut,onSessionExpired}:{onSignOut:()=>void,onSessionExp
  return <section className="staff-page"><div className="staff-content"><header className="staff-header"><div><span className="kicker">Staff workspace</span><h1>{tab==='Overview'?'Club operations':tab}</h1><p>Manage bookings, court availability, and daily performance.</p></div><label className="staff-date"><span>Date</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></header><aside className="staff-sidebar"><nav>{['Overview','Requests','Sessions','Court settings','Reports'].map(t=><button key={t} className={tab===t?'active':''} onClick={()=>setTab(t)}>{t}</button>)}</nav><button className="staff-signout" onClick={logout}>Sign out</button></aside>{error&&<div className="form-error" role="alert">{error}</div>}{!data?<div className="loading-inline"><i/><span>Loading operations…</span></div>:tab==='Overview'?<Overview data={data} date={date}/>:tab==='Requests'?<Requests data={data} action={action}/>:tab==='Sessions'?<StaffSessions data={data} action={action} token={token}/>:tab==='Court settings'?<Courts action={action}/>:<Reports data={data}/>}</div></section>
 }
 
-function Overview({data,date}:{data:any,date:string}){const pending=data.requests.filter((r:any)=>r.status==='Pending').length;return <><div className="metrics"><article><span>Pending requests</span><b>{pending}</b><small>Needs review</small></article><article><span>Scheduled court slots</span><b>{data.slots.length+data.sessions.length+data.blocks.length}</b><small>{date}</small></article><article><span>Confirmed quoted value</span><b>{peso(data.confirmedQuotedValue)}</b><small>Selected date</small></article></div><div className="staff-columns"><section className="staff-panel"><header><span>Schedule</span><b>{new Date(date+'T12:00:00').toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric'})}</b></header>{data.slots.length||data.sessions.length||data.blocks.length?<div className="agenda">{data.slots.map((s:any)=><div key={`slot-${s.id}`}><span className="agenda-time">{formatHour(s.start_hour)}</span><div><b>{s.court_name}</b><small>{s.reference} · {s.player_name}</small></div><span className={`status ${s.request_status.toLowerCase()}`}>{s.request_status}</span></div>)}{data.sessions.map((s:any)=><div key={`session-${s.id}`}><span className="agenda-time">{formatHour(s.start_hour)}</span><div><b>{s.court_name} · {s.title}</b><small>{s.type} · {formatRange(s.start_hour,s.end_hour)}</small></div><span className={`status ${s.published?'confirmed':'pending'}`}>{s.published?'Published':'Draft'}</span></div>)}{data.blocks.map((b:any)=><div key={`block-${b.id}`}><span className="agenda-time">{formatHour(b.start_hour)}</span><div><b>{b.court_name}</b><small>{b.reason} · {formatRange(b.start_hour,b.end_hour)}</small></div><span className="status cancelled">Blocked</span></div>)}</div>:<div className="empty-state">No court activity scheduled.</div>}</section><section className="staff-panel"><header><span>Needs review</span><b>{pending} requests</b></header>{data.requests.filter((r:any)=>r.status==='Pending').map((r:any)=><div className="review-row" key={r.id}><div><b>{r.reference}</b><small>{r.player_name} · {r.slot_count} slots</small></div><b>{peso(r.grand_total)}</b></div>)}{!pending&&<div className="empty-state">Everything is reviewed.</div>}</section></div></>}
+function Overview({data,date}:{data:any,date:string}){
+ const pending=data.requests.filter((r:any)=>r.status==='Pending').length
+ return <>
+  <div className="metrics">
+   <article><span>Pending requests</span><b>{pending}</b><small>Needs review</small></article>
+   <article><span>Scheduled court slots</span><b>{data.slots.length+data.sessions.length+data.blocks.length}</b><small>{date}</small></article>
+   <article><span>Confirmed quoted value</span><b>{peso(data.confirmedQuotedValue)}</b><small>Selected date</small></article>
+  </div>
+  <DayCalendar data={data} date={date}/>
+  <section className="staff-panel overview-reviews">
+   <header><span>Needs review</span><b>{pending} requests</b></header>
+   {data.requests.filter((r:any)=>r.status==='Pending').map((r:any)=><div className="review-row" key={r.id}><div><b>{r.reference}</b><small>{r.player_name} · {r.slot_count} slots</small></div><b>{peso(r.grand_total)}</b></div>)}
+   {!pending&&<div className="empty-state">Everything is reviewed.</div>}
+  </section>
+ </>
+}
+
+function DayCalendar({data,date}:{data:any,date:string}){
+ const groupedBookings=new Map<string,any[]>()
+ for(const slot of data.slots){
+  if(!['Pending','Confirmed'].includes(slot.request_status))continue
+  const key=`${slot.request_id}-${slot.court_id}`
+  groupedBookings.set(key,[...(groupedBookings.get(key)||[]),slot])
+ }
+ const bookings=Array.from(groupedBookings.entries()).flatMap(([key,slots])=>{
+  const ordered=slots.sort((a,b)=>a.start_hour-b.start_hour)
+  const segments:any[]=[]
+  let segment:any=null
+  let index=0
+  for(const slot of ordered){
+   if(!segment||slot.start_hour>segment.end_hour){
+    if(segment)segments.push(segment)
+    segment={...slot,segment:index++}
+   }else{
+    segment.end_hour=Math.max(segment.end_hour,slot.end_hour)
+   }
+  }
+  if(segment)segments.push(segment)
+  return segments.map((item:any)=>({
+   id:`booking-${key}-${item.segment}`,
+   kind:'booking',
+   courtId:item.court_id,
+   start:item.start_hour,
+   end:item.end_hour,
+   title:item.player_name||item.reference,
+   detail:`${item.reference} · ${item.request_status}`,
+   courtName:item.court_name,
+  }))
+ })
+ const events=[
+  ...bookings,
+  ...data.sessions.filter((session:any)=>session.published).map((session:any)=>({
+   id:`session-${session.id}`,
+   kind:'session',
+   courtId:session.court_id,
+   start:session.start_hour,
+   end:session.end_hour,
+   title:session.title,
+   detail:`${session.type} · ${session.published?'Published':'Draft'}`,
+   courtName:session.court_name,
+  })),
+  ...data.blocks.map((block:any)=>({
+   id:`block-${block.id}`,
+   kind:'block',
+   courtId:block.court_id,
+   start:block.start_hour,
+   end:block.end_hour,
+   title:'Court blocked',
+   detail:block.reason,
+   courtName:block.court_name,
+  })),
+ ].filter((event:any)=>event.courtId>=1&&event.courtId<=4&&event.start>=0&&event.end<=24&&event.start<event.end)
+ const courts=[1,2,3,4]
+ const hours=Array.from({length:24},(_,hour)=>hour)
+ const dateLabel=new Date(date+'T12:00:00').toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'})
+ const courtName=(courtId:number)=>events.find((event:any)=>event.courtId===courtId)?.courtName||`Court ${courtId}`
+ return <section className="staff-panel calendar-panel">
+  <header className="calendar-toolbar">
+   <div><span>Daily court calendar</span><b>{dateLabel}</b></div>
+   <div className="calendar-legend">
+    <span><i className="calendar-key booking"/>Booking</span>
+    <span><i className="calendar-key session"/>Session</span>
+    <span><i className="calendar-key block"/>Blocked</span>
+   </div>
+  </header>
+  {!events.length&&<div className="calendar-empty" role="status">No active bookings, published sessions, or court blocks scheduled for this date.</div>}
+  <div className="calendar-scroll">
+   <div className="calendar-grid">
+    <div className="calendar-corner" style={{gridColumn:1,gridRow:1}}>Time</div>
+    {courts.map((courtId,index)=><div className="calendar-court" key={`court-${courtId}`} style={{gridColumn:index+2,gridRow:1}}>{courtName(courtId)}</div>)}
+    {hours.map(hour=><div className="calendar-hour" key={`hour-${hour}`} style={{gridColumn:1,gridRow:hour+2}}>{formatHour(hour)}</div>)}
+    {hours.flatMap(hour=>courts.map((courtId,index)=><div className="calendar-cell" key={`cell-${hour}-${courtId}`} style={{gridColumn:index+2,gridRow:hour+2}}/>))}
+    {events.map((event:any)=><article className={`calendar-event calendar-event-${event.kind}`} key={event.id} style={{gridColumn:event.courtId+1,gridRow:`${event.start+2}/${event.end+2}`}}>
+     <b>{event.title}</b><small>{formatRange(event.start,event.end)}</small><small>{event.detail}</small>
+    </article>)}
+   </div>
+  </div>
+ </section>
+}
 
 function Requests({data,action}:{data:any,action:(p:string,b:any)=>Promise<boolean>}){
  const [form,setForm]=useState<'manual'|'block'|null>(null)

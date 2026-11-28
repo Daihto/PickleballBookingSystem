@@ -1473,34 +1473,163 @@ select:focus-visible {
   font-size: 11px;
 }
 
-.agenda {
-  padding: 0 14px;
-}
-
-.agenda > div {
-  display: grid;
-  grid-template-columns: 74px 1fr auto;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-  padding: 11px 0;
-}
-
-.agenda-time {
-  color: var(--text);
-  font-weight: 850;
-  font-size: 12px;
-}
-
-.agenda div div {
-  display: flex;
-  flex-direction: column;
-}
-
-.agenda small,
 .review-row small,
 .session-row small,
 .roster-row small {
   color: var(--muted);
+}
+
+.calendar-toolbar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.staff-panel .calendar-toolbar > div:first-child b {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.staff-panel header .calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.calendar-key {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.calendar-key.booking {
+  background: #1c5942;
+}
+
+.calendar-key.session {
+  background: #587d8d;
+}
+
+.calendar-key.block {
+  background: #b54135;
+}
+
+.calendar-empty {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-hover);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.calendar-scroll {
+  overflow-x: auto;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 70px repeat(4, minmax(170px, 1fr));
+  grid-template-rows: 44px repeat(24, 48px);
+  min-width: 860px;
+  position: relative;
+}
+
+.calendar-corner,
+.calendar-court {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.calendar-corner {
+  left: 0;
+  z-index: 4;
+  color: var(--muted);
+}
+
+.calendar-hour {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.calendar-cell {
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.calendar-event {
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  margin: 3px;
+  padding: 5px 7px;
+  overflow: hidden;
+  border-left: 3px solid;
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 10px;
+}
+
+.calendar-event b,
+.calendar-event small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event b {
+  font-size: 10px;
+}
+
+.calendar-event small {
+  color: inherit;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.calendar-event-booking {
+  border-color: #1c5942;
+  background: #e4efdf;
+}
+
+.calendar-event-session {
+  border-color: #587d8d;
+  background: #e5eef2;
+}
+
+.calendar-event-block {
+  border-color: #b54135;
+  background: #f7e7e1;
+}
+
+.overview-reviews {
+  margin-top: 14px;
 }
 
 .session-row,
@@ -2221,10 +2350,6 @@ select:focus-visible {
 
   .staff-form-actions {
     grid-column: 1;
-  }
-
-  .agenda > div {
-    grid-template-columns: 58px 1fr auto;
   }
 
   .table-wrap table {
